@@ -17,10 +17,10 @@ elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-data = 0
-if data == 0:
+entry_data = 0
+if entry_data == 0:
     dados = 'Dados'
-elif data == 1:
+elif entry_data == 1:
     dados = 'Dados2'
 
 service_time = 10*60 #10min
@@ -46,7 +46,7 @@ def select_courier(tryfastervehicle, next_costumer, hub_id, cour, point):
     return vehicle, veh_spd
 
 #Find costumer number from Pickup+Delivery id number
-def find_pos(i_d):    
+def find_pos(i_d, points):    
     pos = [i for i,x in enumerate(points['id']) if x==i_d]    
     return pos
 
@@ -64,7 +64,7 @@ def find_id(pos, points):
     #The packages must be delivered by the vehicle that picks them up
     
 
-def get_nearest_index(tryfastervehicle, costumers, current_index, current_load, current_vol, current_time, current_vehicle, DistMat, hub_costum, indices, point, hub_id,cour, service_time, vehicle_spd, delivery_list, i, points, hub_num, df_hub):
+def get_nearest_index(data,tryfastervehicle, costumers, current_index, current_load, current_vol, current_time, current_vehicle, DistMat, hub_costum, indices, point, hub_id,cour, service_time, vehicle_spd, delivery_list, i, points, hub_num, df_hub):
     nearest_ind = None
     nearest_distance = None
     ind_type = None
@@ -99,10 +99,10 @@ def get_nearest_index(tryfastervehicle, costumers, current_index, current_load, 
             continue
         
         dist = DistMat[current_index][next_costumer]
-        wait_time = max(data.iloc[find_pos(find_id(next_costumer,points))[0]-hub_num][s_time] - current_time - dist/veh_spd,0)
+        wait_time = max(data.iloc[find_pos(find_id(next_costumer,points),points)[0]-hub_num][s_time] - current_time - dist/veh_spd,0)
        
         #Check if it can come back to the hub before it closes
-        if int(current_time + service_time + dist/veh_spd + DistMat[next_costumer][find_pos(hub_id)]/veh_spd + wait_time) > int(df_hub[5][find_pos(hub_id)]*60*60):
+        if int(current_time + service_time + dist/veh_spd + DistMat[next_costumer][find_pos(hub_id,points)]/veh_spd + wait_time) > int(df_hub[5][find_pos(hub_id,points)]*60*60):
             continue
         #Check due time
         if current_time + dist/veh_spd > data[e_time].loc[find_id(next_costumer,points)]:
@@ -134,7 +134,7 @@ def get_nearest_index(tryfastervehicle, costumers, current_index, current_load, 
     return current_vehicle, nearest_ind, ind_type, veh_spd
 
 #Modular nearest index check for the modular NN 
-def modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type, current_index, service_time, time, s_time, data, veh_spd):
+def modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type, current_index, service_time, time, s_time, data, veh_spd,points):
     nearest_dist = None
     feasible = True
     pos_index = 1
@@ -145,7 +145,7 @@ def modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type,
         
     for delivery in pseudo_delivery_list:
         
-        dist = DistMat[find_pos(current_index)[pos_index]][find_pos(delivery)[1]]
+        dist = DistMat[find_pos(current_index,points)[pos_index]][find_pos(delivery,points)[1]]
         #Check due time
         if time + dist/veh_spd > data[e_time].loc[delivery]:
             feasible = False
@@ -153,7 +153,7 @@ def modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type,
             break
         
         if nearest_dist is None or dist < nearest_dist:
-            nearest_dist = DistMat[find_pos(current_index)[pos_index]][find_pos(delivery)[1]]
+            nearest_dist = DistMat[find_pos(current_index,points)[pos_index]][find_pos(delivery,points)[1]]
             nearest_ind = delivery
 
     return nearest_ind, ind_type, pos_index, feasible
@@ -171,21 +171,21 @@ def modular_NN(current_index,DistMat,pseudo_delivery_list,pseudo_route, current_
     pseudo_delivery_list.append(current_index)
     feasible = True
     while len(pseudo_delivery_list) != 0 and feasible != False:
-        nearest_ind, ind_type, pos_index, feasible = modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type, current_index, service_time, time, s_time, data, veh_spd)
+        nearest_ind, ind_type, pos_index, feasible = modular_nearest_index(pseudo_route, pseudo_delivery_list, DistMat, ind_type, current_index, service_time, time, s_time, data, veh_spd,points)
         if feasible == False:
             break
 
-        pseudo_route.append(find_pos(nearest_ind)[1])
-        dist = DistMat[find_pos(current_index)[pos_index]][find_pos(nearest_ind)[1]]
-        wait_time = max(data.iloc[find_pos(nearest_ind)[0]-hub_num][s_time] - time - dist/veh_spd,0)
+        pseudo_route.append(find_pos(nearest_ind,points)[1])
+        dist = DistMat[find_pos(current_index,points)[pos_index]][find_pos(nearest_ind,points)[1]]
+        wait_time = max(data.iloc[find_pos(nearest_ind,points)[0]-hub_num][s_time] - time - dist/veh_spd,0)
         time += dist/veh_spd + service_time + wait_time
         current_index = nearest_ind
         ind_type = 'd'
         pseudo_delivery_list.remove(nearest_ind)
 
 
-    time += DistMat[find_pos(current_index)[pos_index]][find_pos(hub_id)]/veh_spd
-    if time > int(df_hub[5][find_pos(hub_id)]*60*60):
+    time += DistMat[find_pos(current_index,points)[pos_index]][find_pos(hub_id,points)]/veh_spd
+    if time > int(df_hub[5][find_pos(hub_id,points)]*60*60):
         feasible = False
     
     return pseudo_route, time, feasible
@@ -218,11 +218,11 @@ def NNs(hub_pairs, i, couriers, indices, data, point, DistMat, service_time, poi
         if nonecounter > 1: 
             tryfastervehicle = True
 
-        vehicle, nearest_ind,ind_type, veh_spd = get_nearest_index(tryfastervehicle, costumers, current_index, current_load, current_vol, current_time,current_vehicle, DistMat, hub_pairs, indices, point, hub_id, cour, service_time, vehicle_spd, delivery_list, i, points, hub_num, df_hub)
+        vehicle, nearest_ind,ind_type, veh_spd = get_nearest_index(data,tryfastervehicle, costumers, current_index, current_load, current_vol, current_time,current_vehicle, DistMat, hub_pairs, indices, point, hub_id, cour, service_time, vehicle_spd, delivery_list, i, points, hub_num, df_hub)
 
         if nearest_ind is None:
             nonecounter += 1
-            travel_dist += DistMat[current_index][find_pos(hub_id)]
+            travel_dist += DistMat[current_index][find_pos(hub_id,points)]
             current_load = 0
             current_vol = 0
             current_time = 0
@@ -246,11 +246,11 @@ def NNs(hub_pairs, i, couriers, indices, data, point, DistMat, service_time, poi
                 s_time = 'start_time_pu' 
             else:
                 s_time = 'start_time_do'
-            wait_time = max(data.iloc[find_pos(find_id(nearest_ind,points))[0]-hub_num][s_time] - current_time - DistMat[current_index][nearest_ind]/veh_spd,0)
+            wait_time = max(data.iloc[find_pos(find_id(nearest_ind,points),points)[0]-hub_num][s_time] - current_time - DistMat[current_index][nearest_ind]/veh_spd,0)
             current_time += dist/veh_spd + wait_time + service_time
             costumers.remove(nearest_ind)
             if ind_type == 'p':
-                costumers.append(find_pos(find_id(nearest_ind,points))[1])
+                costumers.append(find_pos(find_id(nearest_ind,points),points)[1])
                 delivery_list.append(find_id(nearest_ind,points))
             else: 
 
@@ -261,7 +261,7 @@ def NNs(hub_pairs, i, couriers, indices, data, point, DistMat, service_time, poi
         
         # if i ==1:
         #     print(costumers)
-    travel_dist += DistMat[current_index][find_pos(hub_id)]
+    travel_dist += DistMat[current_index][find_pos(hub_id,points)]
     route.append(i)
     cour.drop(vehicle, axis = 0) 
     print('Speed of the used vehicle:', veh_spd)
@@ -275,7 +275,6 @@ def Results():
     travel_distances = []
     routes = []
     vehicle_remaining = []
-    print(df_hub)
     for i in range(hub_num):
         travel_dist, route, vehicle_num = NNs(hub_pairs, i, couriers, indices, data, point, DistMat, service_time, points, hub_num, df_hub)
         travel_distances.append(travel_dist)

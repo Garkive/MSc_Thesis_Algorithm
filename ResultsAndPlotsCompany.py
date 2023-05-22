@@ -18,10 +18,10 @@ elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-data = 0
-if data == 0:
+entry_data = 0
+if entry_data == 0:
     dados = 'Dados'
-elif data == 1:
+elif entry_data == 1:
     dados = 'Dados2'
 
 service_time = 10*60 #10min

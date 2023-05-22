@@ -19,10 +19,10 @@ elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-data = 0
-if data == 0:
+entry_data = 0
+if entry_data == 0:
     dados = 'Dados'
-elif data == 1:
+elif entry_data == 1:
     dados = 'Dados2'
 
 service_time = 10*60 #10min
@@ -46,7 +46,7 @@ def import_data():
     
     veh_type = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/vehicle_types.csv',sep = ';', header=None, skiprows=[0])
     
-    if data == 1:
+    if entry_data == 1:
         def stringtoiso(x):
             date = datetime.strptime(x, '%d/%m/%Y %H:%M')
             date = date.isoformat()

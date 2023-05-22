@@ -65,7 +65,7 @@ data = pd.read_csv(filenames[1])
 data = data.set_index('id')
 
 #Find costumer number from Pickup+Delivery id number
-def find_pos(i_d):    
+def find_pos(i_d, points):    
     pos = [i for i,x in enumerate(points['id']) if x==i_d]    
     return pos
 

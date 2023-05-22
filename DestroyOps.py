@@ -120,18 +120,18 @@ solution_id_copy = copy.deepcopy(id_list)
 n = len(indices)-hub_num #Number of pickup delivery pairs
 d = 0.3 #Degree of destruction
 q = round(n*d) #Number of pairs to be removed each iteration
-p = 1 #Introduces randomness in selection of requests
+p = 7 #Introduces randomness in selection of requests
 phi = 5#Weight of distance in relatedness parameter
 xi = 3#Weight of time in relatedness parameter
 qsi = 2#Weight of demand in relatedness parameter
 
 #Calculate relatedness measure between current customer and every other in the solution
-def relatedness(j, L, DistMat, data, phi, xi, qsi):    
+def relatedness(j, L, DistMat, data, phi, xi, qsi, points):    
     relatedness = []
     for i in range(len(L)):
         p = L[i]
-        p_2 = find_pos(p)
-        j_2 = find_pos(j)
+        p_2 = find_pos(p, points)
+        j_2 = find_pos(j, points)
         relate = phi*(DistMat[j_2[0]][p_2[0]]+DistMat[j_2[1]][p_2[1]]) + xi*((data.loc[j][0]-data.loc[p][0])+(data.loc[j][2]-data.loc[p][2])) + qsi*(data.loc[j][4]-data.loc[p][4])
         relatedness.append(relate) 
     L_sort = [x for _, x in sorted(zip(relatedness, L))]
@@ -160,13 +160,15 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
         j = random.choice(list(D))
         #Temporary set with all current solution costumers not included in D
         #Compute relatedness metric between j and all elements in L, sort L according to it
-        L_sort = relatedness(j, L, dist_mat, data, phi, xi, qsi)
+        L_sort = relatedness(j, L, dist_mat, data, phi, xi, qsi, points)
+        print(L_sort)
         E = round((random.random()**p)*len(L)) #Uniformly choose y in [0,1); E = y^p* len(L)
+        print(E)
         #Select costumer L[E] from L and insert it into D
-        D.append(L_sort[E])
-        L.remove(L_sort[E])
-    print('L: ',L)
-    print('D: ',D)
+        D.append(L_sort[E-1])
+        L.remove(L_sort[E-1])
+    #print('L: ',L)
+    #print('D: ',D)
     partial_solution = partial_sol(solution_id, D)
     #[find_id(x[0],points) for x in indices]
     partial_solution = remove_empty_routes(partial_solution, points)

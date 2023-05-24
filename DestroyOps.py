@@ -33,36 +33,38 @@ import csv
 import random
 import copy
 
-indices = []
-with open('Pickup_delivery_pairs.csv', 'r') as file:
-    reader = csv.reader(file)
-    for row in reader:
-        # convert each string to an integer
-        row = [int(x) for x in row]
-        indices.append(row)
-        
-routes = []
-with open('Initial_solution.csv', 'r') as file:
-    reader = csv.reader(file)
-    for row in reader:
-        # convert each string to an integer
-        row = [int(x) for x in row]
-        routes.append(row)
-
-hub_num = len(routes) #Number of depots
-
-dist_mat = []
-with open('Distance_matrix.csv', 'r') as file:
-    reader = csv.reader(file)
-    for row in reader:
-        # convert each string to an integer
-        row = [float(x) for x in row]
-        dist_mat.append(row)
-
-filenames = ['Pickup_delivery_info.csv', 'Processed_data.csv']
-points = pd.read_csv(filenames[0])
-data = pd.read_csv(filenames[1])
-data = data.set_index('id')
+def import_data():
+    indices = []
+    with open('Pickup_delivery_pairs.csv', 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            # convert each string to an integer
+            row = [int(x) for x in row]
+            indices.append(row)
+            
+    routes = []
+    with open('Initial_solution.csv', 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            # convert each string to an integer
+            row = [int(x) for x in row]
+            routes.append(row)
+    
+    hub_num = len(routes) #Number of depots
+    
+    dist_mat = []
+    with open('Distance_matrix.csv', 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            # convert each string to an integer
+            row = [float(x) for x in row]
+            dist_mat.append(row)
+    
+    filenames = ['Pickup_delivery_info.csv', 'Processed_data.csv']
+    points = pd.read_csv(filenames[0])
+    data = pd.read_csv(filenames[1])
+    data = data.set_index('id')
+    return points, data, dist_mat, hub_num, routes, indices
 
 #Find costumer number from Pickup+Delivery id number
 def find_pos(i_d, points):    
@@ -112,19 +114,17 @@ def solution_ids(solution, points):
                     id_list.append(id_nums[k])
     return id_list, solution_id
 
-solution = display_routes(routes)
-id_list, solution_id = solution_ids(solution, points)
-
-solution_id_copy = copy.deepcopy(id_list)
-
-n = len(indices)-hub_num #Number of pickup delivery pairs
-d = 0.3 #Degree of destruction
-q = round(n*d) #Number of pairs to be removed each iteration
-p = 1 #Introduces randomness in selection of requests
-phi = 5#Weight of distance in relatedness parameter
-xi = 3#Weight of time in relatedness parameter
-qsi = 2#Weight of demand in relatedness parameter
-
+#Remove this function when running from Main.py
+def variables():
+    n = len(indices)-hub_num #Number of pickup delivery pairs
+    d = 0.3 #Degree of destruction
+    q = round(n*d) #Number of pairs to be removed each iteration
+    p = 5 #Introduces randomness in selection of requests
+    phi = 5#Weight of distance in relatedness parameter
+    xi = 3#Weight of time in relatedness parameter
+    qsi = 2#Weight of demand in relatedness parameter
+    return n, d, q, p, phi, xi, qsi
+ 
 #Calculate relatedness measure between current customer and every other in the solution
 def relatedness(j, L, DistMat, data, phi, xi, qsi, points):    
     relatedness = []
@@ -161,14 +161,10 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
         #Temporary set with all current solution costumers not included in D
         #Compute relatedness metric between j and all elements in L, sort L according to it
         L_sort = relatedness(j, L, dist_mat, data, phi, xi, qsi, points)
-        print(L_sort)
         E = round((random.random()**p)*(len(L)-1)) #Uniformly choose y in [0,1); E = y^p* len(L)
-        print(E)
         #Select costumer L[E] from L and insert it into D
         D.append(L_sort[E])
         L.remove(L_sort[E])
-    #print('L: ',L)
-    #print('D: ',D)
     partial_solution = partial_sol(solution_id, D)
     #[find_id(x[0],points) for x in indices]
     partial_solution = remove_empty_routes(partial_solution, points)
@@ -181,5 +177,11 @@ def remove_empty_routes(partial_solution, points):
         partial_solution[i] = [j for j in partial_solution[i] if j!=empty] 
     return partial_solution
 
-partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points)
-print(removed_req)
+def DestroyOperator(id_list, solution_id):
+    points, data, dist_mat, hub_num, routes, indices = import_data()
+    solution_id_copy = copy.deepcopy(id_list)
+    n, d, q, p, phi, xi, qsi = variables()
+    partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points)
+    print('Removed Requests: ', removed_req)
+    return partial_solution, removed_req, solution_id
+

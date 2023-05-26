@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Nov 27 15:00:29 2022
-
-@author: João Moura
-"""
-
 #Destroy operators development to be used in the ALNS framework
 
 #Input - Initial Solution
@@ -34,6 +27,7 @@ import random
 import copy
 
 def import_data():
+    
     indices = []
     with open('Pickup_delivery_pairs.csv', 'r') as file:
         reader = csv.reader(file)
@@ -115,7 +109,7 @@ def solution_ids(solution, points):
     return id_list, solution_id
 
 #Remove this function when running from Main.py
-def variables():
+def variables(indices, hub_num):
     n = len(indices)-hub_num #Number of pickup delivery pairs
     d = 0.3 #Degree of destruction
     q = round(n*d) #Number of pairs to be removed each iteration
@@ -126,13 +120,13 @@ def variables():
     return n, d, q, p, phi, xi, qsi
  
 #Calculate relatedness measure between current customer and every other in the solution
-def relatedness(j, L, DistMat, data, phi, xi, qsi, points):    
+def relatedness(j, L, dist_mat, data, phi, xi, qsi, points):    
     relatedness = []
     for i in range(len(L)):
         p = L[i]
         p_2 = find_pos(p, points)
         j_2 = find_pos(j, points)
-        relate = phi*(DistMat[j_2[0]][p_2[0]]+DistMat[j_2[1]][p_2[1]]) + xi*((data.loc[j][0]-data.loc[p][0])+(data.loc[j][2]-data.loc[p][2])) + qsi*(data.loc[j][4]-data.loc[p][4])
+        relate = phi*(dist_mat[j_2[0]][p_2[0]]+dist_mat[j_2[1]][p_2[1]]) + xi*((data.loc[j][0]-data.loc[p][0])+(data.loc[j][2]-data.loc[p][2])) + qsi*(data.loc[j][4]-data.loc[p][4])
         relatedness.append(relate) 
     L_sort = [x for _, x in sorted(zip(relatedness, L))]
     return L_sort
@@ -140,7 +134,7 @@ def relatedness(j, L, DistMat, data, phi, xi, qsi, points):
 #Update the solution to partial solution
 def partial_sol(solution_id, D):
     partial_solution = []
-    print('Solution: ', solution_id)
+    #print('Solution: ', solution_id)
     for i in range(len(solution_id)):
         temp_sol = []
         for j in range(len(solution_id[i])):
@@ -150,12 +144,12 @@ def partial_sol(solution_id, D):
     return partial_solution    
         
 #SHAW REMOVAL
-def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points):
+def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, data, phi, xi, qsi):
     #Define a copy of the current solution 
     i = random.choice(solution_id_copy)
     D = [i]
-    solution_id_copy.remove(D)
     L = copy.deepcopy(solution_id_copy)
+    L.remove(D)
     while len(D) < q:
         j = random.choice(list(D))
         #Temporary set with all current solution costumers not included in D
@@ -177,11 +171,8 @@ def remove_empty_routes(partial_solution, points):
         partial_solution[i] = [j for j in partial_solution[i] if j!=empty] 
     return partial_solution
 
-def DestroyOperator(id_list, solution_id):
-    points, data, dist_mat, hub_num, routes, indices = import_data()
-    solution_id_copy = copy.deepcopy(id_list)
-    n, d, q, p, phi, xi, qsi = variables()
-    partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points)
-    print('Removed Requests: ', removed_req)
-    return partial_solution, removed_req, solution_id
-
+def DestroyOperator(solution_id_copy, solution_id, points, data, dist_mat, hub_num, routes, indices):
+    n, d, q, p, phi, xi, qsi = variables(indices, hub_num)
+    partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, data, phi, xi, qsi)
+    #print('Removed Requests: ', removed_req)
+    return partial_solution, removed_req

@@ -27,15 +27,13 @@ import random
 import copy
 
 def import_data():
-    
     indices = []
     with open('CSV_Files/Pickup_delivery_pairs.csv', 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             # convert each string to an integer
             row = [int(x) for x in row]
-            indices.append(row)
-            
+            indices.append(row)     
     routes = []
     with open('CSV_Files/Initial_solution.csv', 'r') as file:
         reader = csv.reader(file)
@@ -43,9 +41,7 @@ def import_data():
             # convert each string to an integer
             row = [int(x) for x in row]
             routes.append(row)
-    
     hub_num = len(routes) #Number of depots
-    
     dist_mat = []
     with open('CSV_Files/Distance_matrix.csv', 'r') as file:
         reader = csv.reader(file)
@@ -53,7 +49,6 @@ def import_data():
             # convert each string to an integer
             row = [float(x) for x in row]
             dist_mat.append(row)
-    
     filenames = ['CSV_Files/Pickup_delivery_info.csv', 'CSV_Files/Processed_data.csv']
     points = pd.read_csv(filenames[0])
     data = pd.read_csv(filenames[1])
@@ -139,7 +134,7 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
     i = random.choice(solution_id_copy)
     D = [i]
     L = copy.deepcopy(solution_id_copy)
-    L.remove(D)
+    L.remove(i)
     while len(D) < q:
         j = random.choice(list(D))
         #Temporary set with all current solution costumers not included in D
@@ -166,22 +161,10 @@ def remove_empty_routes(partial_solution, points):
         partial_solution[i] = [j for j in partial_solution[i] if j!=empty] 
     return partial_solution
 
-def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, routes, indices, chosen_ops, current_iter, iter_threshold):
+def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma):
     n, deg, p, phi, xi, qsi = variables(indices, hub_num)
-    if current_iter < iter_threshold[0]:
-        d = deg[0]
-    elif current_iter < iter_threshold[1]:
-        d = deg[1]
-    elif current_iter < iter_threshold[2]:
-        d = deg[2]
-    elif current_iter < iter_threshold[3]:
-        d = deg[3]
-    elif current_iter < iter_threshold[4]:
-        d = deg[4]
-    else:
-        d = deg[0]
-    q = round(n*d) #Number of pairs to be removed each iteration
-    
+    q = random.randint(4, round(n*gamma))
+    #q = round(n*d) #Number of pairs to be removed each iteration   
     if chosen_ops[0] == 'Random':
         p = 1
     partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi)
@@ -191,7 +174,7 @@ def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dis
 def variables(indices, hub_num):
     n = len(indices)-hub_num #Number of pickup delivery pairs
     deg = [0.4, 0.3, 0.25, 0.2, 0.1] #Degree of destruction
-    p = 20 #Introduces randomness in selection of requests
+    p = 6 #Introduces randomness in selection of requests
     phi = 5#Weight of distance in relatedness parameter
     xi = 3#Weight of time in relatedness parameter
     qsi = 2#Weight of demand in relatedness parameter

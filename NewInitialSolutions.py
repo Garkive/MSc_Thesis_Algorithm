@@ -5,6 +5,7 @@ import math
 import heapq
 import copy
 import random
+from collections import deque
 
 #Find costumer number from Pickup+Delivery id number
 def find_pos(i_d,  inv_points):    
@@ -49,7 +50,10 @@ def route_cost(route, dist_mat, points, inv_points, data):
     rcost = 0
     total_tardiness = 0
     time = 0
-
+    # veh_spd = 15
+    # service_time = 600
+    veh_spd = 1
+    service_time = 0
     for i in range(len(route)-1):
         p1 = find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]
         auxiliary_list.append(route[i])
@@ -64,8 +68,8 @@ def route_cost(route, dist_mat, points, inv_points, data):
             e_time = 'end_time_pu'
             s_time = 'start_time_pu'
 
-        travel_time = dist_mat[p1][p2] / 15
-        arrival_time = time + travel_time + 600
+        travel_time = dist_mat[p1][p2] / veh_spd
+        arrival_time = time + travel_time + service_time
 
         if i+1 != len(route)-1 and arrival_time > data[e_time][find_id(p2, points)]:
             tardiness = max(arrival_time - data[e_time][find_id(p2, points)], 0)
@@ -104,10 +108,15 @@ def feasibility_check(route, points, inv_points, dist_mat, data):
     current_volume = 0
     current_time = 0
 
-    weight_limit = 30
-    volume_limit = 3000000
-    service_time = 10 * 60
-    veh_spd = 10
+    # weight_limit = 30
+    # volume_limit = 3000000
+    # service_time = 10 * 60
+    # veh_spd = 10
+    
+    weight_limit = 200
+    volume_limit = 0
+    service_time = 0
+    veh_spd = 1
     
     for i in range(1, len(route) - 1):
         
@@ -157,20 +166,101 @@ def create_route(costumer, dist_mat, indices, hub_num, points, inv_points):
     costumer_pos = find_pos(costumer, inv_points)
     dist = [float(dist_mat[indices[i][0]][costumer_pos[0]] + dist_mat[indices[i][0]][costumer_pos[1]]) for i in range(hub_num)]
     index = dist.index(min(dist))
-    print(index)
     route = [find_id(indices[index][0], points), costumer, costumer, find_id(indices[index][0], points)]
     return route, index
 
-def Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2):
-    
-    random.shuffle(removed_req)
-    
-    for costumer in removed_req:                            
-        insert_list = []
+def new_route_insert_list(costumer, dist_mat, indices, hub_num, points, inv_points, data):
+    costumer_pos = find_pos(costumer, inv_points)
+    dist = [float(dist_mat[indices[i][0]][costumer_pos[0]] + dist_mat[indices[i][0]][costumer_pos[1]]) for i in range(hub_num)]
+    index = dist.index(min(dist))
+    route = [find_id(indices[index][0], points), costumer, costumer, find_id(indices[index][0], points)]
+    rcost, total_tardiness = route_cost(route, dist_mat, points, inv_points, data)
+    if find_id(indices[index][0], points) == 22:
+        i = 0
+    else:
+        i = 1
         
-        # Precalculate route costs and tardiness for each route
-        route_costs = []
-        route_tardiness = []
+    insert_values = (rcost, i, 'nr', 1, 2)
+    return insert_values  
+
+def Regret_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2):
+    while removed_req:
+        costumer_insert_lists = deque()
+        regret_values = deque()
+        
+        # Precalculate route costs and tardiness for each route, for each request
+        route_costs = deque()
+        route_tardiness = deque()
+        for i in range(hub_num):
+            route_costs.append([])
+            route_tardiness.append([])
+            for route in partial_solution[i]:
+                rcost, total_tardiness = route_cost(route, dist_mat, points2, inv_points2, data2)
+                route_costs[i].append(rcost)
+                route_tardiness[i].append(total_tardiness) 
+        print('Removed Requests: ', removed_req)
+        for costumer in removed_req:
+            insert_list = deque()
+            print('Costumer: ', costumer)
+            for i in range(hub_num):
+                for route_ind, route in enumerate(partial_solution[i]):
+                    rcost = route_costs[i][route_ind]
+                    total_tardiness = route_tardiness[i][route_ind]      
+                    temp_route_p = route.copy()
+                    feasibility_p = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)     
+                    if feasibility_p:
+                        for j in range(1, len(route)-1):
+                            temp_route_p.insert(j, costumer)
+                            feasibility_d = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
+                            
+                            if feasibility_d:
+                                for k in range(j+1, len(route)):
+                                    temp_route_d = temp_route_p.copy()
+                                    temp_route_d.insert(k, costumer)
+                                    feasibility = feasibility_check(temp_route_d, points2, inv_points2, dist_mat, data2)
+                                    
+                                    if feasibility:
+                                        icost = insertion_cost(temp_route_d, rcost, dist_mat, points2, inv_points2, data2)
+                                        insert_list.append((icost, i, route_ind, j, k))                    
+                                    temp_route_d.pop(k)                          
+                            temp_route_p.pop(j) 
+            
+            insert_values = new_route_insert_list(costumer, dist_mat, indices2, hub_num, points2, inv_points2, data2)
+            insert_list.append(insert_values)                
+            costumer_insert_lists.append(insert_list)
+            if insert_list:
+                min_cost, min_i, min_route_ind, min_j, min_k = heapq.nsmallest(1, insert_list, key=lambda x: x[0])[0]
+                sorted_array = sorted([arr for arr in insert_list if arr != (min_cost, min_i, min_route_ind, min_j, min_k)], key=lambda x: x[0])
+                if sorted_array:
+                    regret_values.append((sorted_array[0][0] - min_cost, min_i, min_route_ind, min_j, min_k, costumer))        
+
+        if regret_values:
+            sorted_array = sorted(regret_values, key=lambda x: x[0], reverse=True)
+            # Choose the request with the highest regret value
+            min_cost, min_i, min_route_ind, min_j, min_k, costumer = sorted_array[0]
+            if min_route_ind == 'nr':
+                r, ind = create_route(costumer, dist_mat, indices2, hub_num, points2, inv_points2)
+                partial_solution[ind].append(r)
+            else:
+                partial_solution[min_i][min_route_ind].insert(min_j, costumer)
+                partial_solution[min_i][min_route_ind].insert(min_k, costumer)
+            # regret_values.pop(0)
+            removed_req.remove(costumer)
+        else:
+            #Failsafe if not enough (m) feasible insertions
+            partial_solution = Greedy_Insertion(hub_num, [costumer], partial_solution, points2, data2, dist_mat, indices2, inv_points2)
+            removed_req.remove(costumer)
+        
+    return partial_solution
+
+
+def Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2):
+    while removed_req:
+        costumer_insert_lists = deque()
+        greedy_values = deque()
+        # Precalculate route costs and tardiness for each route, for each request
+        route_costs = deque()
+        route_tardiness = deque()
         for i in range(hub_num):
             route_costs.append([])
             route_tardiness.append([])
@@ -178,46 +268,117 @@ def Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dis
                 rcost, total_tardiness = route_cost(route, dist_mat, points2, inv_points2, data2)
                 route_costs[i].append(rcost)
                 route_tardiness[i].append(total_tardiness)
-
-        for i in range(hub_num):
-            for route_ind, route in enumerate(partial_solution[i]):
-                rcost = route_costs[i][route_ind]
-                total_tardiness = route_tardiness[i][route_ind]
-                
-                temp_route_p = route.copy()
-                feasibility_p = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
-                
-                if feasibility_p:
-                    for j in range(1, len(route)-1):
-                        temp_route_p.insert(j, costumer)
-                        feasibility_d = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
-                        
-                        if feasibility_d:
-                            for k in range(j+1, len(route)):
-                                temp_route_d = temp_route_p.copy()
-                                temp_route_d.insert(k, costumer)
-                                feasibility = feasibility_check(temp_route_d, points2, inv_points2, dist_mat, data2)
-                                
-                                if feasibility:
-                                    icost = insertion_cost(temp_route_d, rcost, dist_mat, points2, inv_points2, data2)
-                                    insert_list.append((icost, i, route_ind, j, k))
+        for costumer in removed_req:
+            insert_list = deque()
+            for i in range(hub_num):
+                for route_ind, route in enumerate(partial_solution[i]):
+                    rcost = route_costs[i][route_ind]
+                    total_tardiness = route_tardiness[i][route_ind]
+                    
+                    temp_route_p = deque(route.copy())
+                    feasibility_p = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
+                    
+                    if feasibility_p:
+                        for j in range(1, len(route)-1):
+                            temp_route_p.insert(j, costumer)
+                            feasibility_d = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
+                            
+                            if feasibility_d:
+                                for k in range(j+1, len(route)):
+                                    temp_route_d = deque(temp_route_p.copy())
+                                    temp_route_d.insert(k, costumer)
+                                    feasibility = feasibility_check(temp_route_d, points2, inv_points2, dist_mat, data2)
                                     
-                                temp_route_d.pop(k)
-                                
-                        temp_route_p.pop(j)
-                
-        if insert_list:
-            min_cost, min_i, min_route_ind, min_j, min_k = heapq.nsmallest(1, insert_list, key=lambda x: x[0])[0]
-            partial_solution[min_i][min_route_ind].insert(min_j, costumer)
-            partial_solution[min_i][min_route_ind].insert(min_k, costumer)
-        else:
-            r, ind = create_route(costumer, dist_mat, indices2, hub_num, points2,  inv_points2)
+                                    if feasibility:
+                                        icost = insertion_cost(temp_route_d, rcost, dist_mat, points2, inv_points2, data2)
+                                        insert_list.append((icost, i, route_ind, j, k))
+                                        
+                                    del temp_route_d[k]
+                                    
+                            del temp_route_p[j]
+            costumer_insert_lists.append(insert_list)  
+            insert_values = new_route_insert_list(costumer, dist_mat, indices2, hub_num, points2, inv_points2, data2)
+            insert_list.append(insert_values)              
+            if insert_list:
+                min_cost, min_i, min_route_ind, min_j, min_k = heapq.nsmallest(1, insert_list, key=lambda x: x[0])[0]
+                greedy_values.append((min_cost, min_i, min_route_ind, min_j, min_k, costumer))
+        if greedy_values:
+            sorted_array = sorted(greedy_values, key=lambda x: x[0])
+            min_cost, min_i, min_route_ind, min_j, min_k, costumer = sorted_array[0]
+            if min_route_ind == 'nr':
+                r, ind = create_route(costumer, dist_mat, indices2, hub_num, points2, inv_points2)
+                partial_solution[ind].append(r)
+            else:
+                partial_solution[min_i][min_route_ind].insert(min_j, costumer)
+                partial_solution[min_i][min_route_ind].insert(min_k, costumer)
+            removed_req.remove(costumer)
+        else: #Failsafe 
+            r, ind = create_route(costumer, dist_mat, indices2, hub_num, points2, inv_points2)
             partial_solution[ind].append(r)
             
     return partial_solution
 
-def InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat):
+# def Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2):
+    
+#     random.shuffle(removed_req)
+    
+#     for costumer in removed_req:                            
+#         insert_list = []
+        
+#         # Precalculate route costs and tardiness for each route
+#         route_costs = []
+#         route_tardiness = []
+#         for i in range(hub_num):
+#             route_costs.append([])
+#             route_tardiness.append([])
+#             for route in partial_solution[i]:
+#                 rcost, total_tardiness = route_cost(route, dist_mat, points2, inv_points2, data2)
+#                 route_costs[i].append(rcost)
+#                 route_tardiness[i].append(total_tardiness)
+
+#         for i in range(hub_num):
+#             for route_ind, route in enumerate(partial_solution[i]):
+#                 rcost = route_costs[i][route_ind]
+#                 total_tardiness = route_tardiness[i][route_ind]
+                
+#                 temp_route_p = route.copy()
+#                 feasibility_p = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
+                
+#                 if feasibility_p:
+#                     for j in range(1, len(route)-1):
+#                         temp_route_p.insert(j, costumer)
+#                         feasibility_d = feasibility_check(temp_route_p, points2, inv_points2, dist_mat, data2)
+                        
+#                         if feasibility_d:
+#                             for k in range(j+1, len(route)):
+#                                 temp_route_d = temp_route_p.copy()
+#                                 temp_route_d.insert(k, costumer)
+#                                 feasibility = feasibility_check(temp_route_d, points2, inv_points2, dist_mat, data2)
+                                
+#                                 if feasibility:
+#                                     icost = insertion_cost(temp_route_d, rcost, dist_mat, points2, inv_points2, data2)
+#                                     insert_list.append((icost, i, route_ind, j, k))
+                                    
+#                                 temp_route_d.pop(k)
+                                
+#                         temp_route_p.pop(j)
+                
+#         if insert_list:
+#             min_cost, min_i, min_route_ind, min_j, min_k = heapq.nsmallest(1, insert_list, key=lambda x: x[0])[0]
+#             partial_solution[min_i][min_route_ind].insert(min_j, costumer)
+#             partial_solution[min_i][min_route_ind].insert(min_k, costumer)
+#         else:
+#             r, ind = create_route(costumer, dist_mat, indices2, hub_num, points2,  inv_points2)
+#             partial_solution[ind].append(r)
+            
+#     return partial_solution
+
+def InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice):
     partial_solution = [[] for _ in range(hub_num)]
     removed_req = list(data2['longitude_do'].keys())
-    solution = Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2)
+    if choice == 1:
+        solution = Greedy_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2)
+    elif choice == 2:
+        solution = Regret_Insertion(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2)
+
     return solution

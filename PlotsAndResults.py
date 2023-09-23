@@ -12,6 +12,8 @@ def SimpleWeightsPlot(max_iter, w_evolve):
     second_values = [subarray[1] for subarray in w_evolve]
     third_values = [subarray[2] for subarray in w_evolve]
     fourth_values = [subarray[3] for subarray in w_evolve]
+    fifth_values = [subarray[4] for subarray in w_evolve]
+    sixth_values = [subarray[4] for subarray in w_evolve]
     
     
     # Plot each variable against iterations
@@ -19,6 +21,8 @@ def SimpleWeightsPlot(max_iter, w_evolve):
     plt.plot(iterations, second_values, label='Random')
     plt.plot(iterations, third_values, label='Greedy')
     plt.plot(iterations, fourth_values, label='Regret-2')
+    plt.plot(iterations, fifth_values, label='Regret-3')
+    plt.plot(iterations, sixth_values, label='Regret-4')
     
     plt.xlabel('Iterations')
     plt.ylabel('Values')

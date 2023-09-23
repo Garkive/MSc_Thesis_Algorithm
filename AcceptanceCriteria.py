@@ -13,7 +13,7 @@ def SimulatedAnnealing(newsol_cost, best_sol_cost, temperature, cooling_rate):
     return accept_prob
 
 def calculate_starting_temperature(best_sol_cost, w):
-    w_percent = w / 100.0
+    w_percent = w 
     max_allowed_change = w_percent * best_sol_cost
     starting_temperature = -max_allowed_change / math.log(0.5)
     return starting_temperature

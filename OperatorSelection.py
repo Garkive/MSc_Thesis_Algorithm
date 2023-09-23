@@ -15,10 +15,6 @@ def Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_op
 
 #Weights update every 100 iterations (for now)
 def weights_update(score_dest, score_rep, w_dest, w_rep, teta_dest, teta_rep, aug_scores, r):
-    # print('Shaw score: ', score_dest[0])
-    # print('Random score: ', score_dest[1])
-    # print('Greedy score: ', score_rep[0])
-    # print('Regret-2 score: ', score_rep[1])
     for i in range(len(w_dest)):
         if teta_dest[i] != 0:  # Check for division by zero
             w_dest[i] = w_dest[i] * (1 - r) + r * (score_dest[i] / teta_dest[i])
@@ -51,13 +47,27 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_rep[0] += aug_scores[1]
             elif score_case[2] == True:
                 score_rep[0] += aug_scores[2]     
-        if chosen_ops[1] == 'Regret':
+        if chosen_ops[1] == 'Regret-2':
             if score_case[0] == True:
                 score_rep[1] += aug_scores[0]
             elif score_case[1] == True:
                 score_rep[1] += aug_scores[1]
             elif score_case[2] == True:
                 score_rep[1] += aug_scores[2]  
+        if chosen_ops[1] == 'Regret-3':
+            if score_case[0] == True:
+                score_rep[2] += aug_scores[0]
+            elif score_case[1] == True:
+                score_rep[2] += aug_scores[1]
+            elif score_case[2] == True:
+                score_rep[2] += aug_scores[2]  
+        if chosen_ops[1] == 'Regret-4':
+            if score_case[0] == True:
+                score_rep[3] += aug_scores[0]
+            elif score_case[1] == True:
+                score_rep[3] += aug_scores[1]
+            elif score_case[2] == True:
+                score_rep[3] += aug_scores[2]  
     return score_dest, score_rep
 
     

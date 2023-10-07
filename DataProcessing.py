@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Oct 22 00:02:11 2022
 
-@author: João Moura
-"""
 import pandas as pd
 import math
 import numpy as np

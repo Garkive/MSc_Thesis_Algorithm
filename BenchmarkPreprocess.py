@@ -8,15 +8,19 @@ from collections import deque
 
 def import_and_process_data(file):
     # Read the data from the txt file
-    Dataset = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
     
+    #Laptop and desktop paths
+    #Dataset = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
+    Dataset = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
+
     # Set column names for the DataFrame
     column_names = ['task', 'X', 'Y', 'Demand', 'earliest_time', 'latest_time', 'service_time', 'Pickup', 'Delivery']
     Dataset.columns = column_names
-    
+
     # Read only the first line from the txt file
-    DatasetInfo = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
-    
+    #DatasetInfo = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
+    DatasetInfo = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
+
     # Set column names for the DataFrame
     column_names = ['num_vehicles', 'vehicle_capacity', 'vehicle_speed']
     DatasetInfo.columns = column_names
@@ -33,13 +37,13 @@ def import_and_process_data(file):
     for i in range(1, len(Dataset)):
         if Dataset.iloc[i][0] not in auxiliary_list:
             if Dataset.iloc[i][7] != 0:
-                indices.append([Dataset.iloc[i][0], Dataset.iloc[Dataset.iloc[i][7]][0]])
+                indices.append([Dataset.iloc[Dataset.iloc[i][7]][0],Dataset.iloc[i][0]])
                 auxiliary_list.append(Dataset.iloc[i][0])
                 auxiliary_list.append(Dataset.iloc[Dataset.iloc[i][7]][0])
                 ids.append(counter)
                 counter += 1
             elif Dataset.iloc[i][8] != 0:
-                indices.append([Dataset.iloc[Dataset.iloc[i][8]][0], Dataset.iloc[i][0]])
+                indices.append([Dataset.iloc[i][0],Dataset.iloc[Dataset.iloc[i][8]][0]])
                 auxiliary_list.append(Dataset.iloc[i][0])
                 auxiliary_list.append(Dataset.iloc[Dataset.iloc[i][8]][0])
                 ids.append(counter)
@@ -69,6 +73,7 @@ def import_and_process_data(file):
     points.rename(columns={'X': 'longitude'}, inplace=True)
     points.rename(columns={'Demand': 'weight'}, inplace=True)
     points.loc[:, 'weight'] *= -1 
+    points['service_time'] = Dataset['service_time']
     
     dist_mat = np.zeros((len(Dataset),len(Dataset)))
     
@@ -105,14 +110,24 @@ def import_and_process_data(file):
     for i in range(n+1):
         if i >= hub_num:
             solution_id.append(i)
-        entries = points[points['id'] == i]
-        if len(entries) != 1:
-            inv_points2.append((entries.index[0], entries.index[1]))
-        else:
-            inv_points2.append((entries.index[0], 0))
+        # entries = points[points['id'] == i]
+        # print('Entries: ',entries)
         
+        # if len(entries) != 1:
+        #     print('Entry 0: ',entries.index[0])
+        #     print('Entry 1: ',entries.index[1])
+        #     inv_points2.append((entries.index[0], entries.index[1]))
+        # else:
+        #     inv_points2.append((entries.index[0], 0))
+        
+    
+    for i in range(len(indices)):
+        if len(indices[i]) != 1:
+            inv_points2.append((indices[i][0], indices[i][1]))
+        else:
+            inv_points2.append((indices[i][0], 0))
     inv_points2 = dict(enumerate(inv_points2))
-       
+    
     initial_data = {
         'id': [find_id(indices[1][0], points)],
         'start_time_pu': [Dataset.iloc[indices[1][0]][4]],
@@ -150,6 +165,10 @@ def import_and_process_data(file):
         # Concatenate the original DataFrame with the new row DataFrame
         data = pd.concat([data, new_row], ignore_index=True)
     data.set_index('id', inplace=True)
+    
+    
+    
+    
     return points, data, indices, inv_points2, dist_mat, hub_num, solution_id, veh_capacity, max_vehicles
 
 

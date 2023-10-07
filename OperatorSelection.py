@@ -68,6 +68,13 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_rep[3] += aug_scores[1]
             elif score_case[2] == True:
                 score_rep[3] += aug_scores[2]  
+        if chosen_ops[1] == 'Random':
+            if score_case[0] == True:
+                score_rep[4] += aug_scores[0]
+            elif score_case[1] == True:
+                score_rep[4] += aug_scores[1]
+            elif score_case[2] == True:
+                score_rep[4] += aug_scores[2] 
     return score_dest, score_rep
 
     

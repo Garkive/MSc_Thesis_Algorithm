@@ -28,7 +28,7 @@ import copy
 
 def import_data():
     indices = []
-    with open('CSV_Files/Pickup_delivery_pairs.csv', 'r') as file:
+    with open('CSV_Files/Pickup_delivery_pairs2.csv', 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             # convert each string to an integer
@@ -43,13 +43,13 @@ def import_data():
             routes.append(row)
     hub_num = len(routes) #Number of depots
     dist_mat = []
-    with open('CSV_Files/Distance_matrix.csv', 'r') as file:
+    with open('CSV_Files/Distance_matrix2.csv', 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             # convert each string to an integer
             row = [float(x) for x in row]
             dist_mat.append(row)
-    filenames = ['CSV_Files/Pickup_delivery_info.csv', 'CSV_Files/Processed_data.csv']
+    filenames = ['CSV_Files/Pickup_delivery_info2.csv', 'CSV_Files/Processed_data2.csv']
     points = pd.read_csv(filenames[0])
     data = pd.read_csv(filenames[1])
     data = data.set_index('id')
@@ -149,7 +149,7 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
     partial_solution = remove_empty_routes(partial_solution, points)
     return partial_solution, D
 
-#RANDOM REMOVAL
+#WORST REMOVAL
 # def Worst_Removal(indices, ):
     
 #     return partial_solution, D

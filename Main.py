@@ -8,7 +8,7 @@
 #acceptance function.
 
 #By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2023
-
+import matplotlib.pyplot as plt
 import DestroyOps
 import RepairOps
 import OperatorSelection
@@ -35,10 +35,12 @@ choice2 = 0 #0 if company data, 1 if benchmark
 
 #If benchmark, provide the file name
 file = 'lc101.txt'
+#file = 'LC1_2_1.txt'
 
-max_iter = 10000
-time_limit = 3000
-weight_update_iter = 50 #Iteration interval for weight/score update/reset
+max_iter = 1000
+time_limit = 300000
+weight_update_iter = 50
+# weight_update_iter = 200 #Iteration interval for weight/score update/reset
 
 iter_threshold = dict(enumerate([round(max_iter/6),round(max_iter/4),round(max_iter/4 *2),round(max_iter/4 *3), round(max_iter)]))
 
@@ -150,12 +152,14 @@ if choice2 == 0:
     points['service_time'] = [600]*(len(indices)*2-hub_num)
     points2, data2, indices2, inv_points2, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, choice2)
 elif choice2 == 1:
+    points, data, dist_mat, hub_num, routes, indices = DestroyOps.import_data()
     points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
     points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, choice2)
 chosen_ops = [0]*2
 
 #Simulated Annealing Parameters
 w = 0.35 #Starting Temperature parameter
+# cooling_rate = 0.99994
 cooling_rate = 0.9995
 #cooling_rate = 0.99975
 
@@ -165,6 +169,7 @@ start_time = time.time()
 init_sol = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice)
 
 #Empty variables to display results
+time_array = []
 w_evolve = [] 
 new_sol_cost_evolve = []
 global_sol_cost_evolve = []
@@ -173,7 +178,7 @@ current_sol_cost_evolve = []
 #Generic start variables
 current_time = 0
 current_iter = 1
-gamma = 0.3 #Variable for degree of destruction
+gamma = 0.2 #Variable for degree of destruction
 
 if initial_sol == 1:
     best_sol = init_sol
@@ -189,6 +194,14 @@ temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w
 print('Starting temp: ', temperature)
 accept = False
 
+#Iteration run time performance test variables
+time_greedy = []
+time_random = []
+time_regret2 = []
+
+perf_measure_greedy = []
+perf_measure_random = []
+perf_measure_regret2 = []
 #ADAPTIVE LARGE NEIGHBOURHOOD SEARCH 
 while current_iter <= max_iter and current_time < time_limit:
     
@@ -207,16 +220,23 @@ while current_iter <= max_iter and current_time < time_limit:
         solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma
     )
     
-    # time2 = time.time()
+    time2 = time.time()
     
     #Repair Solution
     current_sol = RepairOps.RepairOperator(
         hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops
     )
         
-    # time3 = time.time()
-    # print('Repair: ', time3-time2)
+    time3 = time.time()
+    print('Repair: ', time3-time2)
     
+    if chosen_ops[1] == 'Greedy':
+        time_greedy.append(time3-time2)
+    elif chosen_ops[1] == 'Random': 
+        time_random.append(time3-time2)
+    elif chosen_ops[1] == 'Regret-2': 
+        time_regret2.append(time3-time2)
+        
     #Calculate cost of obtained solution
     newsol_cost, total_tardiness = RepairOps.solution_cost(current_sol, dist_mat, points, inv_points2, data)
     
@@ -251,6 +271,7 @@ while current_iter <= max_iter and current_time < time_limit:
     current_sol_cost_evolve.append(best_sol_cost)
     global_sol_cost_evolve.append(global_best_cost)
     w_evolve.append((w_dest[0], w_dest[1], w_rep[0], w_rep[1], w_rep[2], w_rep[3], w_rep[4]))
+    time_array.append(time.time()-start_time)
     
     #Update scores
     score_dest, score_rep = OperatorSelection.score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops)        
@@ -261,11 +282,22 @@ while current_iter <= max_iter and current_time < time_limit:
     
     #Weight updates and score resets
     if current_iter % weight_update_iter == 0:
+        
+        perf_measure_greedy.append(score_rep[0]/sum(time_greedy))
+        time_greedy = []
+        perf_measure_random.append(score_rep[4]/sum(time_random))
+        time_random = []
+        perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
+        time_regret2 = []
+        
         w_dest, w_rep = OperatorSelection.weights_update(score_dest, score_rep, w_dest, w_rep, teta_dest, teta_rep, aug_scores, r)
         score_dest = [0]*2 
         score_rep = [0]*5
         teta_dest = [0]*2 
         teta_rep = [0]*5
+        
+
+        
         
     #Temperature update
     temperature *= cooling_rate
@@ -276,14 +308,29 @@ iteration = current_iter - 1
 global_best_cost, total_tardiness = RepairOps.solution_cost(global_best, dist_mat, points, inv_points2, data)
 
 print('Cost of final solution is:', global_best_cost)
-print('Total tardiness of solution is:', total_tardiness)
+# print('Total tardiness of solution is:', total_tardiness)
 print('Total time:', current_time)
 
 PlotsAndResults.SimpleWeightsPlot(iteration, w_evolve)
+PlotsAndResults.WeightsFillPlot(max_iter, w_evolve)
 PlotsAndResults.SolutionCostsPlot(iteration, new_sol_cost_evolve, global_sol_cost_evolve, current_sol_cost_evolve)
 
 formatted_time = "{:.2f}".format(current_time)
 formatted_cost = "{:.2f}".format(global_best_cost)
+
+iterations_heurtimetest = [i for i in range(weight_update_iter, max_iter+1, weight_update_iter)]
+
+plt.plot(iterations_heurtimetest, perf_measure_greedy, label='Greedy')
+plt.plot(iterations_heurtimetest, perf_measure_random, label='Random')
+plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
+
+# Adding labels and a legend
+plt.xlabel('Iterations')
+plt.ylabel('Performance Measure')
+plt.legend()
+
+# Displaying the plot
+plt.show()
 
 #Save Results
 if choice2 == 0:

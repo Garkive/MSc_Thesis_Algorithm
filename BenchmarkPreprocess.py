@@ -11,7 +11,7 @@ def import_and_process_data(file):
     
     #Laptop and desktop paths
     #Dataset = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
-    Dataset = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
+    Dataset = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_200\\' + file, sep='\t', header=None, skiprows=1)
 
     # Set column names for the DataFrame
     column_names = ['task', 'X', 'Y', 'Demand', 'earliest_time', 'latest_time', 'service_time', 'Pickup', 'Delivery']
@@ -19,7 +19,7 @@ def import_and_process_data(file):
 
     # Read only the first line from the txt file
     #DatasetInfo = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
-    DatasetInfo = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
+    DatasetInfo = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_200\\' + file, sep='\t', header=None, nrows=1)
 
     # Set column names for the DataFrame
     column_names = ['num_vehicles', 'vehicle_capacity', 'vehicle_speed']

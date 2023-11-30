@@ -50,10 +50,13 @@ def route_cost(route, dist_mat, points, inv_points, data):
     rcost = 0
     total_tardiness = 0
     time = 0
+    
     veh_spd = 15
     service_time = 600
+    
     # veh_spd = 1
     # service_time = 0
+    
     for i in range(len(route)-1):
         p1 = find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]
         auxiliary_list.append(route[i])
@@ -100,19 +103,22 @@ def insertion_cost(route, rcost, dist_mat, points, inv_points, data):
     insertcost = newrcost - rcost
     return insertcost
 
-#Feasibility of Insertion 
+# #Feasibility of Insertion 
 def feasibility_check(route, points, inv_points, dist_mat, data):
     feasible = True
     current_weight = 0
     current_volume = 0
     current_time = 0
+    
     weight_limit = 30
     volume_limit = 3000000
     service_time = 10 * 60
     veh_spd = 10
+    
     # weight_limit = 200
     # volume_limit = 0
     # veh_spd = 1
+    
     for i in range(1, len(route) - 1):
         wait_time = 0
         if i-1 == 0:
@@ -150,30 +156,18 @@ def feasibility_check(route, points, inv_points, dist_mat, data):
                 current_weight += weight
                 current_volume += volume 
         
-                
-        
         travel_time = dist_mat[p1][p2] / veh_spd
         arrival_time = data[s_time][find_id(p2, points)]   
         end_time = data[e_time][find_id(p2, points)]
         service_time = points['service_time'][p2]
         
-        # print('P1: ', p1)
-        # print('P2: ', p2)
-        
-        # print('Time: ', current_time)
-        # print('Travel Time: ', travel_time)
-        # print('Arrival Time: ', arrival_time)
-        # print('End Time: ', end_time)
-        
         if current_time + travel_time < arrival_time:
             wait_time = arrival_time - travel_time - current_time
         if current_time + travel_time + wait_time >= arrival_time and current_time + travel_time <= end_time:
-            # print('Wait Time: ', wait_time)
             current_time += travel_time + service_time + wait_time
         else:
             feasible = False
             break
-        # print('Time: ', current_time)
     return feasible
 
 def create_route(costumer, dist_mat, indices, hub_num, points, inv_points):
@@ -240,7 +234,7 @@ def Regret_Insertion(hub_num, removed_req, partial_solution, points2, data2, dis
                             temp_route_p.pop(j) 
             
             insert_values = new_route_insert_list(costumer, dist_mat, indices2, hub_num, points2, inv_points2, data2)
-            insert_list.append(insert_values)                
+            insert_list.append(insert_values)      
             costumer_insert_lists.append(insert_list)
             if insert_list:
                 min_cost, min_i, min_route_ind, min_j, min_k = heapq.nsmallest(1, insert_list, key=lambda x: x[0])[0]

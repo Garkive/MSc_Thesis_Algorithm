@@ -10,14 +10,14 @@ import DataProcessing
 
 
 #0 for home pc, 1 for laptop
-local = 1
+local = 0
 if local == 1:
     path = 'exemp' 
 elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-entry_data = 0
+entry_data = 1
 if entry_data == 0:
     dados = 'Dados'
 elif entry_data == 1:

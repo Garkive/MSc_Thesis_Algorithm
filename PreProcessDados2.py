@@ -1,5 +1,7 @@
 
 import pandas as pd
+import os
+import csv
 import math
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,26 +16,26 @@ elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-entry_data = 1
+entry_data = 0
 if entry_data == 0:
     dados = 'Dados'
+    hubdados = '/hubs_aug.csv'
 elif entry_data == 1:
     dados = 'Dados2'
-
+    hubdados = '/hubs.csv'
 service_time = 10*60 #10min
 #Mota = 15 m/s
 #Carrinha = 10 m/s
 
-def import_data():
-    #Read csv files 
+def import_data(dados, hubdados, path):
     cols_pu = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/pu-points.csv',sep = ';', nrows=0).columns.tolist()
     df_pu = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/pu-points.csv',sep = ';', header=None, skiprows=[0])
     
     cols_do = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/do-points.csv',sep = ';', nrows=0).columns.tolist()
     df_do = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/do-points.csv',sep = ';', header=None, skiprows=[0])
     
-    cols_hub = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/hubs_aug.csv',sep = ';', nrows=0).columns.tolist()
-    df_hub = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/hubs_aug.csv',sep = ';', header=None, skiprows=[0])
+    cols_hub = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+hubdados,sep = ';', nrows=0).columns.tolist()
+    df_hub = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+hubdados,sep = ';', header=None, skiprows=[0])
     
     objects = pd.read_csv('C:/Users/'+path+'/Desktop/Tese de Mestrado/'+dados+'/objects.csv',sep = ';', header=None, skiprows=[0])
     
@@ -55,9 +57,9 @@ def import_data():
             return date
         df_pu[5] = df_pu[5].apply(stringtoiso2)
         df_do[5] = df_do[5].apply(stringtoiso2)
+        
     return cols_pu, df_pu, cols_do, df_do, cols_hub, df_hub, objects, couriers, veh_type
-
-
+    
 def haversine(coord1: object, coord2: object):
 
     # Coordinates in decimal degrees (e.g. 2.89078, 12.79797)
@@ -84,8 +86,7 @@ def haversine(coord1: object, coord2: object):
     return meters
 
 def preprocessing(df_pu, df_do, df_hub, objects, couriers):
-    
-    
+     
     objects = objects.rename(columns={0:"id", 1:"weight", 2:"volume"})
     objects = objects.set_index('id')
     
@@ -217,8 +218,6 @@ def preprocessing(df_pu, df_do, df_hub, objects, couriers):
     for i in range(points.shape[0]):
          plt.annotate('%d'%i, (points.iloc[i][2]+0.4, points.iloc[i][1]+0.3), color='black')
     plt.title('Costumer Points')
-    # plt.xlabel('Latitude')
-    # plt.ylabel('Longitude')
     plt.legend()
     plt.grid()
     plt.show()
@@ -276,10 +275,25 @@ def grouping_phase(data, hub_num, indices, DistMat, n, points):
         
     return depot_ind, hub_pairs,Dist_hub,D, hub_costum
  
-def processed_data():
-    cols_pu, df_pu, cols_do, df_do, cols_hub, df_hub, objects, couriers, veh_type = import_data()
-    data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub = preprocessing(df_pu, df_do, df_hub, objects, couriers) 
-    n = data.shape[0]      
-    depot_ind, hub_pairs, Dist_hub, D, hub_costum = grouping_phase (data, hub_num, indices, DistMat, n, points)
-    service_time = 600
-    return data, indices, points, hub_num, DistMat, couriers, point, hub_pairs, service_time, df_hub, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub
+
+cols_pu, df_pu, cols_do, df_do, cols_hub, df_hub, objects, couriers, veh_type = import_data(dados, hubdados, path)
+data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub = preprocessing(df_pu, df_do, df_hub, objects, couriers) 
+n = data.shape[0]      
+depot_ind, hub_pairs, Dist_hub, D, hub_costum = grouping_phase (data, hub_num, indices, DistMat, n, points)
+service_time = 600
+    
+#Save relevant information in .csv format, to be used later
+os.chdir('C:/Users/João Moura/Documents/GitHub/MSc_Thesis_Algorithm/CSV_Files')
+    
+data.to_csv('Processed_data2.csv') #Overall data DataFrame
+
+pd_info = pd.concat([points['id'], point], axis=1, ignore_index=False) 
+pd_info.to_csv('Pickup_delivery_info2.csv', index=False) #Pickup and Delivery ids, lat/long values, weight and volumetric loads
+np.savetxt('Distance_matrix2.csv', DistMat, delimiter=',')
+
+#Associated Pickups and Deliveries
+with open('Pickup_delivery_pairs2.csv', 'w', newline='') as f:
+    # create a CSV writer object
+    writer = csv.writer(f)
+    # write the data to the CSV file
+    writer.writerows(indices)

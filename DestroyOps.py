@@ -21,39 +21,8 @@
 #The value that q takes is between 0 and 1, representing the percentage of the 
 #destroyed in each iteration.
 
-import pandas as pd
-import csv
 import random
 import copy
-
-def import_data():
-    indices = []
-    with open('CSV_Files/Pickup_delivery_pairs2.csv', 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            # convert each string to an integer
-            row = [int(x) for x in row]
-            indices.append(row)     
-    routes = []
-    with open('CSV_Files/Initial_solution.csv', 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            # convert each string to an integer
-            row = [int(x) for x in row]
-            routes.append(row)
-    hub_num = len(routes) #Number of depots
-    dist_mat = []
-    with open('CSV_Files/Distance_matrix2.csv', 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            # convert each string to an integer
-            row = [float(x) for x in row]
-            dist_mat.append(row)
-    filenames = ['CSV_Files/Pickup_delivery_info2.csv', 'CSV_Files/Processed_data2.csv']
-    points = pd.read_csv(filenames[0])
-    data = pd.read_csv(filenames[1])
-    data = data.set_index('id')
-    return points, data, dist_mat, hub_num, routes, indices
 
 #Find costumer number from Pickup+Delivery id number
 def find_pos(i_d,  inv_points):    

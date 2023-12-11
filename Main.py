@@ -31,16 +31,18 @@ initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
 choice = 1 #1 for Greedy Insertion, 2 for Regret-2
 
 #Decide if company data or benchmark
-choice2 = 0 #0 if company data, 1 if benchmark
+choice2 = 1 #0 if company data, 1 if benchmark
 
 #If benchmark, provide the file name
-file = 'lc101.txt'
-#file = 'LC1_2_1.txt'
+# file = 'lc101.txt'
+file = 'LC1_2_1.txt'
 
+#Generic start variables
+current_time = 0
+current_iter = 1
 max_iter = 1000
 time_limit = 300000
 weight_update_iter = 50
-# weight_update_iter = 200 #Iteration interval for weight/score update/reset
 
 iter_threshold = dict(enumerate([round(max_iter/6),round(max_iter/4),round(max_iter/4 *2),round(max_iter/4 *3), round(max_iter)]))
 
@@ -48,13 +50,14 @@ dest_heuristics = ['Shaw', 'Random']
 rep_heuristics = ['Greedy', 'Regret-2', 'Regret-3', 'Regret-4', 'Random']
 
 #Change data structures for more efficient data accessing
-def data_structures(points, data, hub_num, indices, choice2):
+def data_structures(points, data, hub_num, indices, veh_types, choice2):
     
     points2 = points.to_dict()
     data2 = data.to_dict()
     indices2 = dict(enumerate(indices))
     
     if choice2 == 0:
+        fleet = veh_types.to_dict()
         inv_points2 = {}
         n = len(points['id']) - hub_num
         for index, row in points.iterrows():
@@ -65,20 +68,20 @@ def data_structures(points, data, hub_num, indices, choice2):
                 inv_points2[customer_id] = (delivery_number, 0)
             else:
                 inv_points2[customer_id] = (pickup_number, delivery_number)
-        return points2, data2, indices2, inv_points2
+        return points2, data2, indices2, inv_points2, fleet
     else:
         return points2, data2, indices2
     
-def gather_data(points, data, hub_num, indices, routes, choice2):
+def gather_data(points, data, hub_num, indices, routes, veh_types, choice2):
     if choice2 == 0:
-        points2, data2, indices2, inv_points2 = data_structures(points, data, hub_num, indices, choice2)
+        points2, data2, indices2, inv_points2, fleet = data_structures(points, data, hub_num, indices, veh_types, choice2)
     else:
-        points2, data2, indices2 = data_structures(points, data, hub_num, indices, choice2)
+        points2, data2, indices2 = data_structures(points, data, hub_num, indices, [], choice2)
         return points2, data2, indices2
     solution = DestroyOps.display_routes(routes)
     id_list, solution_id = DestroyOps.solution_ids(solution, points, inv_points2)
     solution_id_copy = copy.deepcopy(id_list)
-    return points2, data2, indices2, inv_points2, id_list, solution_id, solution_id_copy
+    return points2, data2, indices2, inv_points2, fleet, id_list, solution_id, solution_id_copy
 
 previous_solutions = set()
 
@@ -117,16 +120,6 @@ def are_routes_equal(route1, route2):
     
     return True
 
-aug_scores = dict(enumerate([80, 9, 13]))
-#aug_scores = dict(enumerate([33, 9, 13])) #Score increasing parameters sigma 1,2 and 3
-r = 0.1 #Reaction Factor - Controls how quickly weights are updated/changing
-score_dest = [0]*2 #List that keeps track of scores for destroy operators
-score_rep = [0]*5 #List that keeps track of scores for repair operators
-w_dest = [1]*2 #First entry is Shaw, second is Random and third is Worst Removals
-w_rep = [1,1,0,0,1] #First entry is Greedy Insertion, second is Regret-2
-teta_dest = [0]*2 #List that keeps track of number of times destroy operator is used
-teta_rep = [0]*5 #List that keeps track of number of times repair operator is used
-
 #Increment teta values, that indicate how many times each heuristic was selected
 def increment_teta(teta_dest, teta_rep, chosen_ops):
     #Destroy Ops
@@ -147,38 +140,51 @@ def increment_teta(teta_dest, teta_rep, chosen_ops):
         teta_rep[4] += 1
     return teta_dest, teta_rep
 
-if choice2 == 0:
-    points, data, dist_mat, hub_num, routes, indices = DestroyOps.import_data()
-    points['service_time'] = [600]*(len(indices)*2-hub_num)
-    points2, data2, indices2, inv_points2, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, choice2)
-elif choice2 == 1:
-    points, data, dist_mat, hub_num, routes, indices = DestroyOps.import_data()
-    points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
-    points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, choice2)
-chosen_ops = [0]*2
+aug_scores = dict(enumerate([80, 9, 13]))
+#aug_scores = dict(enumerate([33, 9, 13])) #Score increasing parameters sigma 1,2 and 3
+r = 0.1 #Reaction Factor - Controls how quickly weights are updated/changing
+score_dest = [0]*2 #List that keeps track of scores for destroy operators
+score_rep = [0]*5 #List that keeps track of scores for repair operators
+w_dest = [1]*2 #First entry is Shaw, second is Random and third is Worst Removals
+w_rep = [1,1,0,0,1] #First entry is Greedy Insertion, second is Regret-2
+teta_dest = [0]*2 #List that keeps track of number of times destroy operator is used
+teta_rep = [0]*5 #List that keeps track of number of times repair operator is used
+gamma = 0.2 #Variable for degree of destruction
 
-#Simulated Annealing Parameters
+#SIMULATED ANNEALING PARAMETERS
 w = 0.35 #Starting Temperature parameter
-# cooling_rate = 0.99994
 cooling_rate = 0.9995
 #cooling_rate = 0.99975
+
+if choice2 == 0:
+    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data()
+    points['service_time'] = [600]*(len(indices)*2-hub_num)
+    points2, data2, indices2, inv_points2, fleet, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, veh_types, choice2)
+elif choice2 == 1:
+    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data()
+    points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
+    points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, [], choice2)
+chosen_ops = [0]*2
+
+
 
 start_time = time.time()
 
 #Acquire random Initial Solutions
 init_sol = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice)
 
-#Empty variables to display results
+#Empty variables to display results and metrics
 time_array = []
 w_evolve = [] 
 new_sol_cost_evolve = []
 global_sol_cost_evolve = []
 current_sol_cost_evolve = []
-
-#Generic start variables
-current_time = 0
-current_iter = 1
-gamma = 0.2 #Variable for degree of destruction
+time_greedy = []
+time_random = []
+time_regret2 = []
+perf_measure_greedy = []
+perf_measure_random = []
+perf_measure_regret2 = []
 
 if initial_sol == 1:
     best_sol = init_sol
@@ -194,14 +200,6 @@ temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w
 print('Starting temp: ', temperature)
 accept = False
 
-#Iteration run time performance test variables
-time_greedy = []
-time_random = []
-time_regret2 = []
-
-perf_measure_greedy = []
-perf_measure_random = []
-perf_measure_regret2 = []
 #ADAPTIVE LARGE NEIGHBOURHOOD SEARCH 
 while current_iter <= max_iter and current_time < time_limit:
     

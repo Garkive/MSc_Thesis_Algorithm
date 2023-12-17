@@ -21,27 +21,29 @@ import copy
 import random
 import csv
 
+# def main():
 #Change current working directory
 import os
 #os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
 os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
+#os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
 #Decide which initial solution to use
 initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
 choice = 1 #1 for Greedy Insertion, 2 for Regret-2
 
 #Decide if company data or benchmark
-choice2 = 1 #0 if company data, 1 if benchmark
+choice2 = 0 #0 if company data, 1 if benchmark
 
 #If benchmark, provide the file name
-# file = 'lc101.txt'
-file = 'LC1_2_1.txt'
+file = 'lc101.txt'
+# file = 'LC1_2_1.txt'
 
 #Generic start variables
 current_time = 0
 current_iter = 1
 max_iter = 1000
-time_limit = 300000
+time_limit = 100000
 weight_update_iter = 50
 
 iter_threshold = dict(enumerate([round(max_iter/6),round(max_iter/4),round(max_iter/4 *2),round(max_iter/4 *3), round(max_iter)]))
@@ -51,7 +53,6 @@ rep_heuristics = ['Greedy', 'Regret-2', 'Regret-3', 'Regret-4', 'Random']
 
 #Change data structures for more efficient data accessing
 def data_structures(points, data, hub_num, indices, veh_types, choice2):
-    
     points2 = points.to_dict()
     data2 = data.to_dict()
     indices2 = dict(enumerate(indices))
@@ -146,7 +147,7 @@ r = 0.1 #Reaction Factor - Controls how quickly weights are updated/changing
 score_dest = [0]*2 #List that keeps track of scores for destroy operators
 score_rep = [0]*5 #List that keeps track of scores for repair operators
 w_dest = [1]*2 #First entry is Shaw, second is Random and third is Worst Removals
-w_rep = [1,1,0,0,1] #First entry is Greedy Insertion, second is Regret-2
+w_rep = [1,0,0,0,1] #First entry is Greedy Insertion, second is Regret-2
 teta_dest = [0]*2 #List that keeps track of number of times destroy operator is used
 teta_rep = [0]*5 #List that keeps track of number of times repair operator is used
 gamma = 0.2 #Variable for degree of destruction
@@ -164,14 +165,23 @@ elif choice2 == 1:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data()
     points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
     points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, [], choice2)
+
+# Initialize empty variables
 chosen_ops = [0]*2
+veh_sol = []
+for i in range(hub_num):
+    veh_sol.append([])
 
-
-
+#Starting Time
 start_time = time.time()
 
 #Acquire random Initial Solutions
-init_sol = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice)
+init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol)
+
+#Pheromone matrix structure
+len(fleet['description'])
+pheromone = []
+
 
 #Empty variables to display results and metrics
 time_array = []
@@ -190,41 +200,65 @@ if initial_sol == 1:
     best_sol = init_sol
 elif initial_sol == 2:
     best_sol = solution_id #MAYBE CHANGE??
-    
-best_sol_cost, initial_tardiness = RepairOps.solution_cost(best_sol, dist_mat, points, inv_points2, data)
+
+best_sol_cost = RepairOps.solution_cost(best_sol, dist_mat, points, inv_points2, data, fleet, veh_sol)
 print('Initial Solution Cost: ', best_sol_cost)
-global_best = best_sol
-global_best_cost = best_sol_cost
+global_best = copy.deepcopy(best_sol)
+global_best_cost = copy.deepcopy(best_sol_cost)
+best_veh_sol = copy.deepcopy(init_veh)
+global_best_veh = copy.deepcopy(init_veh)
 print('Initial Solution:', best_sol)
 temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w)
 print('Starting temp: ', temperature)
 accept = False
 
+def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol):
+    #Destroy Solution
+    partial_solution, removed_req, partial_veh_solution = DestroyOps.DestroyOperator(
+        solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol
+    )
+    #Repair Solution
+    current_sol, current_veh_sol = RepairOps.RepairOperator(
+        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops, fleet, partial_veh_solution
+    )
+    return current_sol, current_veh_sol
+
 #ADAPTIVE LARGE NEIGHBOURHOOD SEARCH 
 while current_iter <= max_iter and current_time < time_limit:
     
-    time1 = time.time()
+    # print('---------------------------------------------------------')
+    # time1 = time.time()
     accept_prob = 0
     
-    print('Iteration:', current_iter, flush=True)
-    score_case = [False]*3
+    print('Iteration: ', current_iter)
     
+    score_case = [False]*3
+
     #Choose Heuristics for this iteration and increment teta values
     chosen_ops = OperatorSelection.Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_ops) 
     teta_dest, teta_rep = increment_teta(teta_dest, teta_rep, chosen_ops)
     
-    #Destroy Solution
-    partial_solution, removed_req = DestroyOps.DestroyOperator(
-        solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma
-    )
-    
+    # print('Before Destroy: ', [len(best_sol[0]),len(best_sol[1])])
+    # print([len(best_veh_sol[0]),len(best_veh_sol[1])])
     time2 = time.time()
     
-    #Repair Solution
-    current_sol = RepairOps.RepairOperator(
-        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops
-    )
-        
+    best_sol_copy = copy.deepcopy(best_sol)
+    best_veh_sol_copy = copy.deepcopy(best_veh_sol)
+    #DESTROY/REPAIR PROCEDURE
+    current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy)
+
+    
+    
+    # print('After Destroy: ', [len(partial_solution[0]),len(partial_solution[1])])
+    # print([len(partial_veh_solution[0]),len(partial_veh_solution[1])])
+    
+    # print('GLOBAL BESTS 2: ', [len(global_best[0]),len(global_best[1])])
+    # print([len(global_best_veh[0]),len(global_best_veh[1])])  
+    
+    
+    # print('After Repair: ', [len(current_sol[0]),len(current_sol[1])])
+    # print([len(current_veh_sol[0]),len(current_veh_sol[1])])
+
     time3 = time.time()
     print('Repair: ', time3-time2)
     
@@ -234,10 +268,10 @@ while current_iter <= max_iter and current_time < time_limit:
         time_random.append(time3-time2)
     elif chosen_ops[1] == 'Regret-2': 
         time_regret2.append(time3-time2)
-        
+       
+     
     #Calculate cost of obtained solution
-    newsol_cost, total_tardiness = RepairOps.solution_cost(current_sol, dist_mat, points, inv_points2, data)
-    
+    newsol_cost = RepairOps.solution_cost(current_sol, dist_mat, points, inv_points2, data, fleet, current_veh_sol)
     
     #Acceptance Criteria
     accept_prob = AcceptanceCriteria.SimulatedAnnealing(newsol_cost, best_sol_cost, temperature, cooling_rate)
@@ -246,23 +280,28 @@ while current_iter <= max_iter and current_time < time_limit:
         accept = True
     else:
         accept = False    
-    
+
     if accept:
+        # print('Accepted.')
         is_new, previous_solutions = is_new_solution(previous_solutions, current_sol)    
         if newsol_cost < global_best_cost:
             score_case[0] = True
-            global_best_cost = newsol_cost
-            global_best = current_sol
+            global_best_cost = copy.deepcopy(newsol_cost)
+            global_best = copy.deepcopy(current_sol)
+            global_best_veh = copy.deepcopy(current_veh_sol)
             print('Solution Improved - Cost:', global_best_cost, flush=True)
-            print('Solution Tardiness:', total_tardiness, flush=True)
+            # print('Solution Tardiness:', total_tardiness, flush=True)
            
         elif is_new and newsol_cost < best_sol_cost:
             score_case[1] = True    
         elif is_new and newsol_cost > best_sol_cost:
             score_case[2] = True
         
-        best_sol = current_sol
-        best_sol_cost = newsol_cost
+        best_veh_sol = copy.deepcopy(current_veh_sol)
+        best_sol = copy.deepcopy(current_sol)
+        best_sol_cost = copy.deepcopy(newsol_cost)
+    
+    
     
     #Update cost and weight arrays for results
     new_sol_cost_evolve.append(newsol_cost)
@@ -285,8 +324,8 @@ while current_iter <= max_iter and current_time < time_limit:
         time_greedy = []
         perf_measure_random.append(score_rep[4]/sum(time_random))
         time_random = []
-        perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
-        time_regret2 = []
+        # perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
+        # time_regret2 = []
         
         w_dest, w_rep = OperatorSelection.weights_update(score_dest, score_rep, w_dest, w_rep, teta_dest, teta_rep, aug_scores, r)
         score_dest = [0]*2 
@@ -299,11 +338,14 @@ while current_iter <= max_iter and current_time < time_limit:
         
     #Temperature update
     temperature *= cooling_rate
+
     
+print('Global best: ', global_best)
+print(global_best_veh)
 iteration = current_iter - 1    
 
 #Evaluate cost of final best solution, redundant, but just for additional checking
-global_best_cost, total_tardiness = RepairOps.solution_cost(global_best, dist_mat, points, inv_points2, data)
+global_best_cost = RepairOps.solution_cost(global_best, dist_mat, points, inv_points2, data, fleet, global_best_veh)
 
 print('Cost of final solution is:', global_best_cost)
 # print('Total tardiness of solution is:', total_tardiness)
@@ -320,7 +362,7 @@ iterations_heurtimetest = [i for i in range(weight_update_iter, max_iter+1, weig
 
 plt.plot(iterations_heurtimetest, perf_measure_greedy, label='Greedy')
 plt.plot(iterations_heurtimetest, perf_measure_random, label='Random')
-plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
+# plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
 
 # Adding labels and a legend
 plt.xlabel('Iterations')
@@ -355,3 +397,6 @@ with open(name, mode="w", newline="") as csv_file:
         writer.writerow(result)
 
 print(f"Results saved to {name}")
+
+# if __name__ == "__main__":
+#     main()

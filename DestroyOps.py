@@ -98,7 +98,7 @@ def partial_sol(solution_id, D):
     return partial_solution    
         
 #SHAW REMOVAL
-def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi):
+def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution):
     #Define a copy of the current solution 
     i = random.choice(solution_id_copy)
     D = [i]
@@ -115,8 +115,10 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
         L.remove(L_sort[E])
     partial_solution = partial_sol(solution_id, D)
     #[find_id(x[0],points) for x in indices]
-    partial_solution = remove_empty_routes(partial_solution, points)
-    return partial_solution, D
+    # print('Shaw partials :', partial_solution)
+    # print(veh_solution)
+    partial_solution, veh_solution = remove_empty_routes(partial_solution, points, veh_solution)
+    return partial_solution, D, veh_solution
 
 #WORST REMOVAL
 # def Worst_Removal(indices, ):
@@ -124,21 +126,27 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
 #     return partial_solution, D
 
 #Remove empty routes from generated partial solution
-def remove_empty_routes(partial_solution, points):
+def remove_empty_routes(partial_solution, points, veh_solution):
+    aux_list = []
     for i in range(len(partial_solution)):
         empty = [find_id(i,points), find_id(i,points)]
-        partial_solution[i] = [j for j in partial_solution[i] if j!=empty] 
-    return partial_solution
+        for j in range(len(partial_solution[i])):
+            if partial_solution[i][j] == empty:
+                aux_list.append((i,j))
+    for k in reversed(range(len(aux_list))): 
+        del partial_solution[aux_list[k][0]][aux_list[k][1]]
+        del veh_solution[aux_list[k][0]][aux_list[k][1]]
+    return partial_solution, veh_solution
 
-def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma):
+def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma, veh_solution):
     n, deg, p, phi, xi, qsi = variables(indices, hub_num)
     q = random.randint(4, round(n*gamma))
     #q = round(n*d) #Number of pairs to be removed each iteration   
     if chosen_ops[0] == 'Random':
         p = 1
-    partial_solution, removed_req = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi)
+    partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
     #print('Removed Requests: ', removed_req)
-    return partial_solution, removed_req
+    return partial_solution, removed_req, veh_solution
 
 def variables(indices, hub_num):
     n = len(indices)-hub_num #Number of pickup delivery pairs

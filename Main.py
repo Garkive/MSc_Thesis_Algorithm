@@ -20,13 +20,14 @@ import time
 import copy
 import random
 import csv
+import numpy as np
 
 # def main():
 #Change current working directory
 import os
 #os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
 os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
-#os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
+# os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
 #Decide which initial solution to use
 initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
@@ -42,7 +43,7 @@ file = 'lc101.txt'
 #Generic start variables
 current_time = 0
 current_iter = 1
-max_iter = 1000
+max_iter = 10000
 time_limit = 100000
 weight_update_iter = 50
 
@@ -175,13 +176,35 @@ for i in range(hub_num):
 #Starting Time
 start_time = time.time()
 
+# Initial pheromone value parameter
+delta_rho = 0.5
+evap = 0.1
+
+def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap):
+    # #Pheromone matrix structure
+    n_veh = len(fleet['description'])
+    n_points = (len(indices)-hub_num)*2+hub_num
+    
+    #Calculate median values of costumer list volume and weight demands
+    median_w = np.median(list(data['weight']))
+    median_v = np.median(list(data['volume']))
+    pheromone_mat = []
+    for i in range(1,n_veh+1):
+        rho_veh = median_w/fleet['max_weight'][i] + median_v/fleet['capacity'][i]
+        pheromone_mat.append([[rho_veh for _ in range(n_points)] for _ in range(n_points)])
+    pheromone_mat = np.array(pheromone_mat)
+    
+    # Set diagonal elements to 0
+    for matrix in pheromone_mat:
+        for i in range(n_points):
+            matrix[i][i] = 0
+    
+    return pheromone_mat
+
+pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap)
+
 #Acquire random Initial Solutions
-init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol)
-
-#Pheromone matrix structure
-len(fleet['description'])
-pheromone = []
-
+init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol, pheromone_mat)
 
 #Empty variables to display results and metrics
 time_array = []
@@ -225,9 +248,7 @@ def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2,
 
 #ADAPTIVE LARGE NEIGHBOURHOOD SEARCH 
 while current_iter <= max_iter and current_time < time_limit:
-    
-    # print('---------------------------------------------------------')
-    # time1 = time.time()
+
     accept_prob = 0
     
     print('Iteration: ', current_iter)
@@ -238,26 +259,12 @@ while current_iter <= max_iter and current_time < time_limit:
     chosen_ops = OperatorSelection.Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_ops) 
     teta_dest, teta_rep = increment_teta(teta_dest, teta_rep, chosen_ops)
     
-    # print('Before Destroy: ', [len(best_sol[0]),len(best_sol[1])])
-    # print([len(best_veh_sol[0]),len(best_veh_sol[1])])
     time2 = time.time()
     
     best_sol_copy = copy.deepcopy(best_sol)
     best_veh_sol_copy = copy.deepcopy(best_veh_sol)
     #DESTROY/REPAIR PROCEDURE
     current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy)
-
-    
-    
-    # print('After Destroy: ', [len(partial_solution[0]),len(partial_solution[1])])
-    # print([len(partial_veh_solution[0]),len(partial_veh_solution[1])])
-    
-    # print('GLOBAL BESTS 2: ', [len(global_best[0]),len(global_best[1])])
-    # print([len(global_best_veh[0]),len(global_best_veh[1])])  
-    
-    
-    # print('After Repair: ', [len(current_sol[0]),len(current_sol[1])])
-    # print([len(current_veh_sol[0]),len(current_veh_sol[1])])
 
     time3 = time.time()
     print('Repair: ', time3-time2)
@@ -319,10 +326,15 @@ while current_iter <= max_iter and current_time < time_limit:
     
     #Weight updates and score resets
     if current_iter % weight_update_iter == 0:
-        
-        perf_measure_greedy.append(score_rep[0]/sum(time_greedy))
+        if sum(time_greedy) == 0:
+            perf_measure_greedy.append(0)
+        else:
+            perf_measure_greedy.append(score_rep[0]/sum(time_greedy))
+        if sum(time_random) == 0:
+            perf_measure_random.append(0)
+        else:
+            perf_measure_random.append(score_rep[4]/sum(time_random))
         time_greedy = []
-        perf_measure_random.append(score_rep[4]/sum(time_random))
         time_random = []
         # perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
         # time_regret2 = []

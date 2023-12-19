@@ -6,6 +6,8 @@
 #Define a selection scheme for each operator in each iteration.
 
 import random
+import RepairOps
+import numpy as np
 
 #Roulette Selection for destroy and repair heuristics
 def Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_ops):
@@ -77,8 +79,33 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_rep[4] += aug_scores[2] 
     return score_dest, score_rep
 
-    
-    
-    
+def vehicle_selection(route, fleet, pheromone_mat, points, inv_points):
+    arcs = []
+    auxiliary_list = []
+    for i in range(len(route)-1):
+        p1 = RepairOps.find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]
+        auxiliary_list.append(route[i])    
+        if i+1 != len(route)-1:
+            p2 = RepairOps.find_pos(route[i+1], inv_points)[auxiliary_list.count(route[i+1])]
+        else:
+            p2 = RepairOps.find_pos(route[i+1], inv_points)[0]
+        arcs.append([p1, p2])
+    weights = []
+    for j in range(len(pheromone_mat)):
+        weight = 0
+        for i in range(len(arcs)):
+            weight += pheromone_mat[j][arcs[i][0]][arcs[i][1]]
+        weights.append(weight)
+    vehicle = random.choices(range(len(weights)), weights = weights, k = 1)[0] + 1
+    return vehicle
 
+# def Pheromones_update(pheromone_mat, solution, update, delta_rho):
+#     if update == 'Global':
+        
+#     elif update == 'Local':
+        
+#     return pheromone_mat
 
+def Pheromone_evap(pheromone_mat, evap):
+    pheromone_mat = pheromone_mat-pheromone_mat*evap
+    return pheromone_mat

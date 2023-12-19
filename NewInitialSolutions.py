@@ -8,6 +8,7 @@ import heapq
 import copy
 import random
 from collections import deque
+import OperatorSelection
 
 def import_data():
     indices = []
@@ -352,7 +353,7 @@ def Regret_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, 
             
 #     return partial_solution
 
-def Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution):
+def Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution, pheromone_mat):
     
     random.shuffle(removed_req)
     
@@ -399,15 +400,16 @@ def Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, 
         else:
             r, ind = create_routeNIS(costumer, dist_mat, indices2, hub_num, points2,  inv_points2)
             partial_solution[ind].append(r)
-            veh_solution[ind].append(2)
+            vehicle = OperatorSelection.vehicle_selection(r, fleet, pheromone_mat, points2, inv_points2)
+            veh_solution[ind].append(vehicle)
     return partial_solution, veh_solution
 
-def InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_solution):
+def InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_solution, pheromone_mat):
     partial_solution = [[] for _ in range(hub_num)]
     removed_req = list(data2['longitude_do'].keys())
     if choice == 1:
-        solution, veh_solution = Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution)
+        solution, veh_solution = Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution, pheromone_mat)
     elif choice == 2:
-        solution, veh_solution = Regret_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution)
+        solution, veh_solution = Regret_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, fleet, veh_solution, pheromone_mat)
 
     return solution, veh_solution

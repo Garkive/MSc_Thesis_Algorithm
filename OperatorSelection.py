@@ -79,7 +79,18 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_rep[4] += aug_scores[2] 
     return score_dest, score_rep
 
-def vehicle_selection(route, fleet, pheromone_mat, points, inv_points):
+def vehicle_selection(route, pheromone_mat, inv_points):
+    arcs = Route_arcs(route, inv_points)
+    weights = []
+    for j in range(len(pheromone_mat)):
+        weight = 0
+        for i in range(len(arcs)):
+            weight += pheromone_mat[j][arcs[i][0]][arcs[i][1]]
+        weights.append(weight)
+    vehicle = random.choices(range(len(weights)), weights = weights, k = 1)[0] + 1
+    return vehicle
+
+def Route_arcs(route, inv_points): 
     arcs = []
     auxiliary_list = []
     for i in range(len(route)-1):
@@ -90,22 +101,20 @@ def vehicle_selection(route, fleet, pheromone_mat, points, inv_points):
         else:
             p2 = RepairOps.find_pos(route[i+1], inv_points)[0]
         arcs.append([p1, p2])
-    weights = []
-    for j in range(len(pheromone_mat)):
-        weight = 0
-        for i in range(len(arcs)):
-            weight += pheromone_mat[j][arcs[i][0]][arcs[i][1]]
-        weights.append(weight)
-    vehicle = random.choices(range(len(weights)), weights = weights, k = 1)[0] + 1
-    return vehicle
+    return arcs
 
-# def Pheromones_update(pheromone_mat, solution, update, delta_rho):
-#     if update == 'Global':
-        
-#     elif update == 'Local':
-        
-#     return pheromone_mat
-
-def Pheromone_evap(pheromone_mat, evap):
-    pheromone_mat = pheromone_mat-pheromone_mat*evap
+def Pheromones_update(pheromone_mat, solution, update, delta_rho, inv_points):
+    arcs = []
+    for i in range(len(solution)):
+        for route in solution[i]:
+            arc = Route_arcs(route, inv_points)
+            arcs += arc
+    if update == 'Global':
+        for arc in arcs:
+            for i in range(len(pheromone_mat)):
+                pheromone_mat[i][arc[0]][arc[1]] += delta_rho
+    elif update == 'Local':
+        for arc in arcs:
+            for i in range(len(pheromone_mat)):
+                pheromone_mat[i][arc[0]][arc[1]] += delta_rho/10
     return pheromone_mat

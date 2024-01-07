@@ -10,7 +10,8 @@
 #Optimized data structures allow for fast computation and costumer insertion
 
 import heapq
-import math
+import OperatorSelection
+""" import math """
 import time
 import random
 from collections import deque
@@ -147,18 +148,13 @@ def feasibility_check(route, points, inv_points, dist_mat, data, fleet, vehicle)
             break
     return feasible
 
-def create_route(costumer, dist_mat, indices, hub_num, points, inv_points, fleet, veh_solution):
+def create_route(costumer, dist_mat, indices, hub_num, points, inv_points, fleet, veh_solution, pheromone_mat):
     costumer_pos = find_pos(costumer, inv_points)
     dist = [float(dist_mat[indices[i][0]][costumer_pos[0]] + dist_mat[indices[i][0]][costumer_pos[1]]) for i in range(hub_num)]
     index = dist.index(min(dist))
     route = [find_id(indices[index][0], points), costumer, costumer, find_id(indices[index][0], points)]
-    #------------------------------------------------------------------------
-    
-    
-    #INSERT HERE CODE FOR VEHICLE CHOICE AND UPDATE OF THE VEH_SOLUTION LIST
-    
-    
-    #------------------------------------------------------------------------
+    choice_v = OperatorSelection.vehicle_selection(route, pheromone_mat, inv_points)
+    veh_solution[index].append(choice_v)
     return route, index, veh_solution
 
 def new_route_insert_list(costumer, dist_mat, indices, hub_num, points, inv_points, data, fleet):
@@ -175,7 +171,7 @@ def new_route_insert_list(costumer, dist_mat, indices, hub_num, points, inv_poin
     insert_values = (rcost, i, 'nr', 1, 2)
     return insert_values   
 
-def Random_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, fleet, veh_solution):
+def Random_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, fleet, veh_solution, pheromone_mat):
     random.shuffle(removed_req)
     insert_list = []
     for costumer in removed_req:     
@@ -203,12 +199,12 @@ def Random_Insertion(hub_num, removed_req, partial_solution, points, data, dist_
             partial_solution[i][route_ind].insert(j, costumer)
             partial_solution[i][route_ind].insert(k, costumer)
         else:
-            r, ind, veh_solution = create_route(costumer, dist_mat, indices, hub_num, points,  inv_points, fleet, veh_solution)
+            r, ind, veh_solution = create_route(costumer, dist_mat, indices, hub_num, points,  inv_points, fleet, veh_solution, pheromone_mat)
             partial_solution[ind].append(r)   
-            veh_solution[ind].append(2)
+            #veh_solution[ind].append(2)
     return partial_solution, veh_solution
 
-def Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution):
+def Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution, pheromone_mat):
     random.shuffle(removed_req)
     for costumer in removed_req:
         insert_list = []
@@ -250,11 +246,10 @@ def Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_
             partial_solution[min_i][min_route_ind].insert(min_j, costumer)
             partial_solution[min_i][min_route_ind].insert(min_k, costumer)
         else:
-            r, ind, veh_solution = create_route(costumer, dist_mat, indices, hub_num, points, inv_points, fleet, veh_solution)
+            r, ind, veh_solution = create_route(costumer, dist_mat, indices, hub_num, points, inv_points, fleet, veh_solution, pheromone_mat)
             partial_solution[ind].append(r)
-            veh_solution[ind].append(2)
+            #veh_solution[ind].append(2)
     return partial_solution, veh_solution
-
 
 # def Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops):
 #     while removed_req:
@@ -393,18 +388,18 @@ def Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_
         
     return partial_solution, veh_solution
 
-def RepairOperator(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution):
+def RepairOperator(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution, pheromone_mat):
     if chosen_ops[1] == 'Greedy':
-        solution, veh_solution = Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution)
+        solution, veh_solution = Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, fleet, veh_solution, pheromone_mat)
     elif chosen_ops[1] == 'Regret-2':
         regret = 0
-        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution)
+        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution, pheromone_mat)
     elif chosen_ops[1] == 'Regret-3':
         regret = 1
-        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution)
+        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution, pheromone_mat)
     elif chosen_ops[1] == 'Regret-4':
         regret = 2
-        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution)
+        solution, veh_solution = Regret_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, chosen_ops, regret, fleet, veh_solution, pheromone_mat)
     elif chosen_ops[1] == 'Random':
-        solution, veh_solution = Random_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, fleet, veh_solution)
+        solution, veh_solution = Random_Insertion(hub_num, removed_req, partial_solution, points, data, dist_mat, indices, inv_points, fleet, veh_solution, pheromone_mat)
     return solution, veh_solution

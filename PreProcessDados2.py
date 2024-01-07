@@ -16,7 +16,7 @@ elif local == 0:
     path = 'João Moura'
 
 #0 for first data, 1 for second
-entry_data = 0
+entry_data = 1
 if entry_data == 0:
     dados = 'Dados'
     hubdados = '/hubs_aug.csv'

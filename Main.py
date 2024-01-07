@@ -1,5 +1,5 @@
 #Adaptive Large Neighborhood Search (ALNS) algorithm with Simulated Annealing acceptance criteria
-#to solve the VRPPD with multiple depots, time windows, capacitated (volume and weight).
+#to solve the VRPPD with multiple depots, time windows, capacitated (volume and weight) and with heterogenous fleet.
 #It deals with a specific case from a real world distribution company as well as the Li & Lim benchmarks.
 
 #Modules DestroyOps.py and RepairOps.py contain the main heuristics as well as the required support
@@ -7,7 +7,8 @@
 #function to select heuristics. AcceptanceCriteria.py contains a simple Simulated Annealing 
 #acceptance function.
 
-#By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2023
+#By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
+
 import matplotlib.pyplot as plt
 import DestroyOps
 import RepairOps
@@ -26,6 +27,7 @@ import numpy as np
 #Change current working directory
 import os
 #os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
+# os.chdir('C:\\Users\\exemp\\Desktop\\MSc_Thesis_Algorithm-main\\MSc_Thesis_Algorithm-main')
 os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 # os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
@@ -43,7 +45,7 @@ file = 'lc101.txt'
 #Generic start variables
 current_time = 0
 current_iter = 1
-max_iter = 10000
+max_iter = 1
 time_limit = 100000
 weight_update_iter = 50
 
@@ -172,15 +174,17 @@ chosen_ops = [0]*2
 veh_sol = []
 for i in range(hub_num):
     veh_sol.append([])
-
+ 
 #Starting Time
 start_time = time.time()
+# Pheromone variables
+delta_rho = 0.2
+evap = 0.001
 
-# Initial pheromone value parameter
-delta_rho = 0.5
-evap = 0.1
 
-def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap):
+
+
+""" def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap):
     # #Pheromone matrix structure
     n_veh = len(fleet['description'])
     n_points = (len(indices)-hub_num)*2+hub_num
@@ -199,9 +203,26 @@ def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap):
         for i in range(n_points):
             matrix[i][i] = 0
     
-    return pheromone_mat
+    return pheromone_mat """
 
-pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap)
+def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points):
+    # #Pheromone matrix structure
+    n_veh = len(fleet['description'])
+    n_points = (len(indices)-hub_num)*2+hub_num
+    
+    pheromone_mat = [[[0 for _ in range(n_points)] for _ in range(n_points)] for _ in range(n_veh)]
+    for i in range(1,n_veh+1):
+        for j in range(n_points): 
+            for k in range(hub_num, n_points):
+                pheromone_mat[i-1][j][k] =  data['weight'][RepairOps.find_id(k, points)]/fleet['max_weight'][i] + data['volume'][RepairOps.find_id(k, points)]/fleet['capacity'][i]  
+    # Set diagonal elements to 0
+    for matrix in pheromone_mat:
+        for i in range(n_points):
+            matrix[i][i] = 0
+    
+    return np.array(pheromone_mat)
+
+pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points)
 
 #Acquire random Initial Solutions
 init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol, pheromone_mat)
@@ -235,14 +256,16 @@ temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w
 print('Starting temp: ', temperature)
 accept = False
 
-def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol):
+print(pheromone_mat[0][0])
+
+def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol, pheromone_mat):
     #Destroy Solution
     partial_solution, removed_req, partial_veh_solution = DestroyOps.DestroyOperator(
         solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol
     )
     #Repair Solution
     current_sol, current_veh_sol = RepairOps.RepairOperator(
-        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops, fleet, partial_veh_solution
+        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops, fleet, partial_veh_solution, pheromone_mat
     )
     return current_sol, current_veh_sol
 
@@ -264,7 +287,7 @@ while current_iter <= max_iter and current_time < time_limit:
     best_sol_copy = copy.deepcopy(best_sol)
     best_veh_sol_copy = copy.deepcopy(best_veh_sol)
     #DESTROY/REPAIR PROCEDURE
-    current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy)
+    current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy, pheromone_mat)
 
     time3 = time.time()
     print('Repair: ', time3-time2)
@@ -280,6 +303,8 @@ while current_iter <= max_iter and current_time < time_limit:
     #Calculate cost of obtained solution
     newsol_cost = RepairOps.solution_cost(current_sol, dist_mat, points, inv_points2, data, fleet, current_veh_sol)
     
+    if newsol_cost < best_sol_cost:
+        pheromone_mat = OperatorSelection.Pheromones_update(pheromone_mat, best_sol, 'Local', delta_rho, inv_points2)
     #Acceptance Criteria
     accept_prob = AcceptanceCriteria.SimulatedAnnealing(newsol_cost, best_sol_cost, temperature, cooling_rate)
     
@@ -296,6 +321,7 @@ while current_iter <= max_iter and current_time < time_limit:
             global_best_cost = copy.deepcopy(newsol_cost)
             global_best = copy.deepcopy(current_sol)
             global_best_veh = copy.deepcopy(current_veh_sol)
+            pheromone_mat = OperatorSelection.Pheromones_update(pheromone_mat, best_sol, 'Global', delta_rho, inv_points2)
             print('Solution Improved - Cost:', global_best_cost, flush=True)
             # print('Solution Tardiness:', total_tardiness, flush=True)
            
@@ -348,8 +374,9 @@ while current_iter <= max_iter and current_time < time_limit:
 
         
         
-    #Temperature update
+    #Temperature and Pheromone update
     temperature *= cooling_rate
+    pheromone_mat *= (1-evap)
 
     
 print('Global best: ', global_best)
@@ -394,10 +421,10 @@ results = []
 
 
 for i in range(hub_num):
-    resultwrite = {"Depot": i, "Route": global_best[i]}
+    resultwrite = {"Depot": i, "Route": global_best[i], "Vehicle": global_best_veh[i]}
     results.append(resultwrite)
 
-header = ["Depot","Route"]
+header = ["Depot","Route","Vehicle"]
 with open(name, mode="w", newline="") as csv_file:
     writer = csv.DictWriter(csv_file, fieldnames=header)
 

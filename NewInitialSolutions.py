@@ -400,7 +400,7 @@ def Greedy_InsertionNIS(hub_num, removed_req, partial_solution, points2, data2, 
         else:
             r, ind = create_routeNIS(costumer, dist_mat, indices2, hub_num, points2,  inv_points2)
             partial_solution[ind].append(r)
-            vehicle = OperatorSelection.vehicle_selection(r, fleet, pheromone_mat, points2, inv_points2)
+            vehicle = OperatorSelection.vehicle_selection(r, pheromone_mat, inv_points2)
             veh_solution[ind].append(vehicle)
     return partial_solution, veh_solution
 

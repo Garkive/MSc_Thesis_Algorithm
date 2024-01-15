@@ -22,6 +22,7 @@ import copy
 import random
 import csv
 import numpy as np
+from scipy.interpolate import make_interp_spline
 
 # def main():
 #Change current working directory
@@ -34,7 +35,6 @@ os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 #Decide which initial solution to use
 initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
 choice = 1 #1 for Greedy Insertion, 2 for Regret-2
-
 #Decide if company data or benchmark
 choice2 = 0 #0 if company data, 1 if benchmark
 
@@ -397,19 +397,35 @@ PlotsAndResults.SolutionCostsPlot(iteration, new_sol_cost_evolve, global_sol_cos
 formatted_time = "{:.2f}".format(current_time)
 formatted_cost = "{:.2f}".format(global_best_cost)
 
-iterations_heurtimetest = [i for i in range(weight_update_iter, max_iter+1, weight_update_iter)]
 
-plt.plot(iterations_heurtimetest, perf_measure_greedy, label='Greedy')
-plt.plot(iterations_heurtimetest, perf_measure_random, label='Random')
-# plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
+#------------- PERFORMANCE MEASURE PLOT ---------------
+iterations_heurtimetest = np.array([i for i in range(weight_update_iter, max_iter+1, weight_update_iter)])
+iterations_heurtimetest = np.mean(iterations_heurtimetest.reshape(-1,int((2*max_iter)/1000)), axis=1)
+perf_measure_greedy = np.array(perf_measure_greedy)
+perf_measure_greedy = np.mean(perf_measure_greedy.reshape(-1,int((2*max_iter)/1000)), axis=1)
+perf_measure_random = np.array(perf_measure_random)
+perf_measure_random = np.mean(perf_measure_random.reshape(-1,int((2*max_iter)/1000)), axis=1)
+
+X_Y1_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_greedy)
+X_Y2_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_random)
+X_ = np.linspace(iterations_heurtimetest.min(), iterations_heurtimetest.max(), 500)
+
+Y1_ = X_Y1_Spline(X_)
+Y2_ = X_Y2_Spline(X_)
+
+plt.plot(X_, Y1_, label='Greedy')
+plt.plot(X_, Y2_, label='Random')
+plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
 
 # Adding labels and a legend
+plt.title('Heuristic Performance Measure')
 plt.xlabel('Iterations')
 plt.ylabel('Performance Measure')
 plt.legend()
 
 # Displaying the plot
 plt.show()
+#------------------------------------------------------
 
 #Save Results
 if choice2 == 0:

@@ -61,13 +61,13 @@ def route_cost(route, dist_mat, points, inv_points, data, fleet, vehicle):
             time = arrival_time
             tardiness = 0
         rcost += dist_mat[p1][p2] + tardiness
-        
+    rcost = rcost*(fleet['cost_km'][vehicle]/1000)
     return rcost
 
 #Calculates Total Solution Cost (Using route_cost function)
 def solution_cost(solution, dist_mat, points, inv_points, data, fleet, veh_solution):
     scost = 0
-    sol_tardiness = 0
+    # sol_tardiness = 0
     
     for i in range(len(solution)):
         for j in range(len(solution[i])):
@@ -167,7 +167,6 @@ def new_route_insert_list(costumer, dist_mat, indices, hub_num, points, inv_poin
         i = 0
     else:
         i = 1
-        
     insert_values = (rcost, i, 'nr', 1, 2)
     return insert_values   
 
@@ -214,8 +213,7 @@ def Greedy_Insertion(hub_num, removed_req, partial_solution, points, data, dist_
         for i in range(hub_num):
             route_costs.append([])
             #route_tardiness.append([])
-            for j in range(len(partial_solution[i])):
-                
+            for j in range(len(partial_solution[i])):                
                 # print('ROUTE COST TEST: ', [len(partial_solution[0]),len(partial_solution[1])])
                 # print([len(veh_solution[0]),len(veh_solution[1])])
                 rcost = route_cost(partial_solution[i][j], dist_mat, points, inv_points, data, fleet, veh_solution[i][j])

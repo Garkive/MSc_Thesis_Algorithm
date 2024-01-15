@@ -68,3 +68,5 @@ for hub in hubs:
             hub_route.append(company_sol[i])
     comp_sol.append(hub_route)
     
+comp_veh_sol = [[2,2,2,2,2,2,2,2],[2,2,1,2,2,2,2,1,2,2,2,2,2,2]]
+# print('Comp cost:', RepairOps.solution_cost(comp_sol, dist_mat, points, inv_points2, data, fleet, comp_veh_sol))

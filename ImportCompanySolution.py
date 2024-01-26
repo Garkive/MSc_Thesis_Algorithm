@@ -45,7 +45,7 @@ route = []
 courier_num = 0
 cour_sol = []
 
-for i in range(len(df_csol)):   
+for i in range(len(df_csol)):
     if df_csol.iloc[i][0] != courier_num:
         if i != 0:
             route.append(courier_hubs[df_csol.iloc[i-1][0]])
@@ -63,10 +63,9 @@ comp_sol = []
 for hub in hubs:
     hub_route = []
     for i in range(len(company_sol)):
-        
         if company_sol[i][0] == hub:
             hub_route.append(company_sol[i])
     comp_sol.append(hub_route)
     
 comp_veh_sol = [[2,2,2,2,2,2,2,2],[2,2,1,2,2,2,2,1,2,2,2,2,2,2]]
-# print('Comp cost:', RepairOps.solution_cost(comp_sol, dist_mat, points, inv_points2, data, fleet, comp_veh_sol))
+# RepairOps.solution_cost(comp_sol, dist_mat, points2, inv_points2, data, fleet, comp_veh_sol)

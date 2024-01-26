@@ -59,9 +59,9 @@ G = ox.add_edge_speeds(G)
 G = ox.add_edge_travel_times(G)
 
 # Save graph to disk if you want to reuse it
-# ox.save_graphml(G, "Lisbon.graphml")
+ox.save_graphml(G, "Lisbon.graphml")
 # Load the graph
-#G = ox.load_graphml("Lisbon.graphml")
+G = ox.load_graphml("Lisbon.graphml")
 
 # Plot the graph
 fig, ax = ox.plot_graph(G, figsize=(10, 10), node_size=0, edge_color='y', edge_linewidth=0.2)
@@ -80,8 +80,9 @@ for i in range(n):
         destination_node = ox.nearest_nodes(G, Y=destination_coordinates[0], X=destination_coordinates[1])
         distance_in_meters = nx.shortest_path_length(G, origin_node, destination_node, weight='length')
         dist_mat1.append(distance_in_meters)
-        print("distance in meters", distance_in_meters)
+        # print("distance in meters", distance_in_meters)
     dist_mat.append(dist_mat1)
+
         
         
 # # Two pairs of (lat,lng) coordinates

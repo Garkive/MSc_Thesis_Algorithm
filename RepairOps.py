@@ -33,7 +33,7 @@ def route_cost(route, dist_mat, points, inv_points, data, fleet, vehicle):
     time = 0
     
     veh_spd = fleet['speed'][vehicle]
-    service_time = 10 * 60
+    service_time = 5 * 60
     
     # veh_spd = 1
     # service_time = 0
@@ -61,7 +61,7 @@ def route_cost(route, dist_mat, points, inv_points, data, fleet, vehicle):
             time = arrival_time
             tardiness = 0
         rcost += dist_mat[p1][p2] + tardiness
-    rcost = rcost*(fleet['cost_km'][vehicle]/1000)
+    rcost = rcost*((fleet['cost_km'][vehicle]/1000)/100)
     return rcost
 
 #Calculates Total Solution Cost (Using route_cost function)

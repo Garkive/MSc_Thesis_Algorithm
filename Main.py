@@ -37,7 +37,7 @@ initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
 choice = 1 #1 for Greedy Insertion, 2 for Regret-2
 #Decide if company data or benchmark
 choice2 = 0 #0 if company data, 1 if benchmark
-
+choice3 = 0 #0 if 20 costumers, 1 if 156 costumers
 #If benchmark, provide the file name
 file = 'lc101.txt'
 # file = 'LC1_2_1.txt'
@@ -45,7 +45,7 @@ file = 'lc101.txt'
 #Generic start variables
 current_time = 0
 current_iter = 1
-max_iter = 1
+max_iter = 10000
 time_limit = 100000
 weight_update_iter = 50
 
@@ -161,11 +161,11 @@ cooling_rate = 0.9995
 #cooling_rate = 0.99975
 
 if choice2 == 0:
-    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data()
+    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
     points['service_time'] = [600]*(len(indices)*2-hub_num)
     points2, data2, indices2, inv_points2, fleet, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, veh_types, choice2)
 elif choice2 == 1:
-    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data()
+    points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
     points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
     points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, [], choice2)
 
@@ -415,14 +415,14 @@ Y2_ = X_Y2_Spline(X_)
 
 plt.plot(X_, Y1_, label='Greedy')
 plt.plot(X_, Y2_, label='Random')
-plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
+# plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
 
 # Adding labels and a legend
 plt.title('Heuristic Performance Measure')
 plt.xlabel('Iterations')
 plt.ylabel('Performance Measure')
 plt.legend()
-
+plt.grid()
 # Displaying the plot
 plt.show()
 #------------------------------------------------------

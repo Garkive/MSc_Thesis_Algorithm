@@ -10,9 +10,20 @@ import random
 from collections import deque
 import OperatorSelection
 
-def import_data():
+def import_data(choice):
+    if choice == 0:
+        pdpair = 'CSV_Files/Pickup_delivery_pairs.csv'
+        pdinfo = 'CSV_Files/Pickup_delivery_info.csv'
+        dmat = 'CSV_Files/Distance_matrix.csv'
+        dat = 'CSV_Files/Processed_data.csv'
+    elif choice == 1:
+        pdpair = 'CSV_Files/Pickup_delivery_pairs2.csv'
+        pdinfo = 'CSV_Files/Pickup_delivery_info2.csv'
+        dmat = 'CSV_Files/Distance_matrix2.csv'
+        dat = 'CSV_Files/Processed_data2.csv'
+        
     indices = []
-    with open('CSV_Files/Pickup_delivery_pairs2.csv', 'r') as file:
+    with open(pdpair, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             # convert each string to an integer
@@ -27,13 +38,14 @@ def import_data():
             routes.append(row)
     hub_num = len(routes) #Number of depots
     dist_mat = []
-    with open('CSV_Files/Distance_matrix2.csv', 'r') as file:
+    with open(dmat, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
             # convert each string to an integer
             row = [float(x) for x in row]
             dist_mat.append(row)
-    filenames = ['CSV_Files/Pickup_delivery_info2.csv', 'CSV_Files/Processed_data2.csv']
+    filenames = [pdinfo, dat]
+    print(filenames)
     points = pd.read_csv(filenames[0])
     data = pd.read_csv(filenames[1])
     data = data.set_index('id')
@@ -89,7 +101,7 @@ def route_costNIS(route, dist_mat, points, inv_points, data, fleet, vehicle):
     time = 0
     
     veh_spd = fleet['speed'][vehicle]
-    service_time = 10 * 60
+    service_time = 5 * 60
     
     # veh_spd = 1
     # service_time = 0
@@ -121,7 +133,7 @@ def route_costNIS(route, dist_mat, points, inv_points, data, fleet, vehicle):
 
         rcost += dist_mat[p1][p2] + tardiness
     
-    rcost = rcost*(fleet['cost_km'][vehicle]/1000)
+    rcost = (rcost*(fleet['cost_km'][vehicle]/1000)/100)
     
     return rcost
 

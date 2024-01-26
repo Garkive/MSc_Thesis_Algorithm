@@ -1,3 +1,3 @@
 id_transport_type;description;capacity;max_weight;speed;cost_km
 1;Mota;80000;10;15;4.5
-4;Carrinha;3000000;30;10;22.5
+4;Carrinha;3000000;300;10;22.5

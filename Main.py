@@ -36,16 +36,16 @@ os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
 choice = 1 #1 for Greedy Insertion, 2 for Regret-2
 #Decide if company data or benchmark
-choice2 = 0 #0 if company data, 1 if benchmark
+choice2 = 1 #0 if company data, 1 if benchmark
 choice3 = 0 #0 if 20 costumers, 1 if 156 costumers
 #If benchmark, provide the file name
-file = 'lc101.txt'
+file = 'lr101.txt'
 # file = 'LC1_2_1.txt'
 
 #Generic start variables
 current_time = 0
 current_iter = 1
-max_iter = 10000
+max_iter = 50000
 time_limit = 100000
 weight_update_iter = 50
 
@@ -157,8 +157,8 @@ gamma = 0.2 #Variable for degree of destruction
 
 #SIMULATED ANNEALING PARAMETERS
 w = 0.35 #Starting Temperature parameter
-cooling_rate = 0.9995
-#cooling_rate = 0.99975
+# cooling_rate = 0.9995
+cooling_rate = 0.99985
 
 if choice2 == 0:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
@@ -166,7 +166,8 @@ if choice2 == 0:
     points2, data2, indices2, inv_points2, fleet, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, veh_types, choice2)
 elif choice2 == 1:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
-    points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_capacity, max_vehicles = BenchmarkPreprocess.import_and_process_data(file)
+    points, data, indices, inv_points2, dist_mat, hub_num, solution_id_copy, veh_types = BenchmarkPreprocess.import_and_process_data(file)
+    fleet = veh_types.to_dict()
     points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, [], choice2)
 
 # Initialize empty variables
@@ -205,24 +206,31 @@ evap = 0.001
     
     return pheromone_mat """
 
-def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points):
+def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points, choice2):
     # #Pheromone matrix structure
     n_veh = len(fleet['description'])
     n_points = (len(indices)-hub_num)*2+hub_num
-    
-    pheromone_mat = [[[0 for _ in range(n_points)] for _ in range(n_points)] for _ in range(n_veh)]
-    for i in range(1,n_veh+1):
-        for j in range(n_points): 
-            for k in range(hub_num, n_points):
-                pheromone_mat[i-1][j][k] =  data['weight'][RepairOps.find_id(k, points)]/fleet['max_weight'][i] + data['volume'][RepairOps.find_id(k, points)]/fleet['capacity'][i]  
-    # Set diagonal elements to 0
-    for matrix in pheromone_mat:
-        for i in range(n_points):
-            matrix[i][i] = 0
-    
-    return np.array(pheromone_mat)
+    if choice2 == 0:
+        pheromone_mat = [[[0 for _ in range(n_points)] for _ in range(n_points)] for _ in range(n_veh)]
+        for i in range(1,n_veh+1):
+            for j in range(n_points): 
+                for k in range(hub_num, n_points):
+                    pheromone_mat[i-1][j][k] =  data['weight'][RepairOps.find_id(k, points)]/fleet['max_weight'][i] + data['volume'][RepairOps.find_id(k, points)]/fleet['capacity'][i]  
+        # Set diagonal elements to 0
+        for matrix in pheromone_mat:
+            for i in range(n_points):
+                matrix[i][i] = 0
+        return np.array(pheromone_mat)
+    elif choice2 == 1:
+        pheromone_mat = [[[1 for _ in range(n_points)] for _ in range(n_points)] for _ in range(n_veh)]
+        # Set diagonal elements to 0
+        for matrix in pheromone_mat:
+            for i in range(n_points):
+                matrix[i][i] = 0
+        return np.array(pheromone_mat)
 
-pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points)
+pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points, choice2)
+
 
 #Acquire random Initial Solutions
 init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol, pheromone_mat)
@@ -255,8 +263,6 @@ print('Initial Solution:', best_sol)
 temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w)
 print('Starting temp: ', temperature)
 accept = False
-
-print(pheromone_mat[0][0])
 
 def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol, pheromone_mat):
     #Destroy Solution
@@ -376,7 +382,7 @@ while current_iter <= max_iter and current_time < time_limit:
         
     #Temperature and Pheromone update
     temperature *= cooling_rate
-    pheromone_mat *= (1-evap)
+    pheromone_mat = pheromone_mat*(1-evap)
 
     
 print('Global best: ', global_best)

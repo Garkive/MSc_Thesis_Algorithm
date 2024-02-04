@@ -31,13 +31,9 @@ def route_cost(route, dist_mat, points, inv_points, data, fleet, vehicle):
     rcost = 0
     total_tardiness = 0
     time = 0
-    
     veh_spd = fleet['speed'][vehicle]
-    service_time = 5 * 60
-    
-    # veh_spd = 1
-    # service_time = 0
-    
+    # service_time = 5 * 60
+    service_time = 0
     for i in range(len(route)-1):
         p1 = find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]
         auxiliary_list.append(route[i])
@@ -98,10 +94,6 @@ def feasibility_check(route, points, inv_points, dist_mat, data, fleet, vehicle)
     veh_spd = fleet['speed'][vehicle]
     service_time = 10 * 60
     
-    # weight_limit = 200
-    # volume_limit = 0
-    # veh_spd = 1
-    
     for i in range(1, len(route) - 1):
         wait_time = 0
         if i-1 == 0:
@@ -117,7 +109,6 @@ def feasibility_check(route, points, inv_points, dist_mat, data, fleet, vehicle)
                 weight = data['weight'][route[i-1]]
                 volume = data['volume'][route[i-1]]
                 p1 = find_pos(route[i-1], inv_points)[0]
-
         if route[i] in route[:i] and i != len(route) - 1:
             p2 = find_pos(route[i], inv_points)[1]
             s_time = 'start_time_do'

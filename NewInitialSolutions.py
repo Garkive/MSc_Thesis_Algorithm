@@ -101,10 +101,8 @@ def route_costNIS(route, dist_mat, points, inv_points, data, fleet, vehicle):
     time = 0
     
     veh_spd = fleet['speed'][vehicle]
-    service_time = 5 * 60
-    
-    # veh_spd = 1
-    # service_time = 0
+    # service_time = 5 * 60
+    service_time = 0
     
     for i in range(len(route)-1):
         p1 = find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]

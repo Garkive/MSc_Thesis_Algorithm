@@ -97,7 +97,7 @@ def partial_sol(solution_id, D):
         partial_solution.append(temp_sol)
     return partial_solution    
         
-#SHAW REMOVAL
+#RANDOM/SHAW REMOVAL
 def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution):
     #Define a copy of the current solution 
     i = random.choice(solution_id_copy)
@@ -114,16 +114,26 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
         D.append(L_sort[E])
         L.remove(L_sort[E])
     partial_solution = partial_sol(solution_id, D)
-    #[find_id(x[0],points) for x in indices]
-    # print('Shaw partials :', partial_solution)
-    # print(veh_solution)
     partial_solution, veh_solution = remove_empty_routes(partial_solution, points, veh_solution)
     return partial_solution, D, veh_solution
 
-#WORST REMOVAL
-# def Worst_Removal(indices, ):
-    
-#     return partial_solution, D
+#ROUTE REMOVAL
+def Route_removal(solution, veh_solution):
+    unique = []
+    removed_req = []
+    route_choices = []
+    for i in range(len(solution)):
+        depot_choice = [(j-1,i) for j in range(1, len(solution[i])+1)]
+        route_choices += depot_choice
+    chosen_route = random.choice(route_choices)
+    popped_route = solution[chosen_route[1]].pop(chosen_route[0])
+    del veh_solution[chosen_route[1]][chosen_route[0]]
+    for i in range(len(popped_route)):
+        unique.append(popped_route[i])
+    del unique[-1]
+    del unique[0]
+    [removed_req.append(x) for x in unique if x not in removed_req]
+    return solution, removed_req, veh_solution
 
 #Remove empty routes from generated partial solution
 def remove_empty_routes(partial_solution, points, veh_solution):
@@ -139,20 +149,22 @@ def remove_empty_routes(partial_solution, points, veh_solution):
     return partial_solution, veh_solution
 
 def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma, veh_solution):
-    n, deg, p, phi, xi, qsi = variables(indices, hub_num)
+    n, p, phi, xi, qsi = variables(indices, hub_num)
     q = random.randint(4, round(n*gamma))
     #q = round(n*d) #Number of pairs to be removed each iteration   
     if chosen_ops[0] == 'Random':
         p = 1
-    partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
-    #print('Removed Requests: ', removed_req)
+        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
+    if chosen_ops[0] == 'Shaw':
+        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
+    if chosen_ops[0] == 'Route Removal':
+        partial_solution, removed_req, veh_solution = Route_removal(solution_id, veh_solution)
     return partial_solution, removed_req, veh_solution
 
 def variables(indices, hub_num):
     n = len(indices)-hub_num #Number of pickup delivery pairs
-    deg = [0.4, 0.3, 0.25, 0.2, 0.1] #Degree of destruction
     p = 6 #Introduces randomness in selection of requests
     phi = 5#Weight of distance in relatedness parameter
     xi = 3#Weight of time in relatedness parameter
     qsi = 2#Weight of demand in relatedness parameter
-    return n, deg, p, phi, xi, qsi
+    return n, p, phi, xi, qsi

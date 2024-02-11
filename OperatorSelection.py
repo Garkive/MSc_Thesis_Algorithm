@@ -7,7 +7,6 @@
 
 import random
 import RepairOps
-import numpy as np
 
 #Roulette Selection for destroy and repair heuristics
 def Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_ops):
@@ -42,6 +41,13 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_dest[1] += aug_scores[1]
             elif score_case[2] == True:
                 score_dest[1] += aug_scores[2]
+        if chosen_ops[0] == 'Route Removal':
+            if score_case[0] == True:
+                score_dest[2] += aug_scores[0]
+            elif score_case[1] == True:
+                score_dest[2] += aug_scores[1]
+            elif score_case[2] == True:
+                score_dest[2] += aug_scores[2]
         if chosen_ops[1] == 'Greedy':
             if score_case[0] == True:
                 score_rep[0] += aug_scores[0]
@@ -79,15 +85,16 @@ def score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops):
                 score_rep[4] += aug_scores[2] 
     return score_dest, score_rep
 
-def vehicle_selection(route, pheromone_mat, inv_points):
-    arcs = Route_arcs(route, inv_points)
-    weights = []
-    for j in range(len(pheromone_mat)):
-        weight = 0
-        for i in range(len(arcs)):
-            weight += pheromone_mat[j][arcs[i][0]][arcs[i][1]]
-        weights.append(weight)
-    vehicle = random.choices(range(len(weights)), weights = weights, k = 1)[0] + 1
+def vehicle_selection(route, pheromone_mat, inv_points, vehicles):
+    # arcs = Route_arcs(route, inv_points)
+    # weights = []
+    # for j in range(len(pheromone_mat)):
+    #     weight = 0
+    #     for i in range(len(arcs)):
+    #         weight += pheromone_mat[j][arcs[i][0]][arcs[i][1]]
+    #     weights.append(weight)
+    # vehicle = random.choices(range(len(weights)), weights = weights, k = 1)[0] + 1
+    vehicle = random.choices(vehicles,weights = [1 for v in vehicles], k = 1)[0]
     return vehicle
 
 def Route_arcs(route, inv_points): 

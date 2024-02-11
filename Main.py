@@ -32,26 +32,23 @@ import os
 os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 # os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
-#Decide which initial solution to use
-initial_sol = 1 #1 for random Greedy Insertion, 2 for NN
-choice = 1 #1 for Greedy Insertion, 2 for Regret-2
 #Decide if company data or benchmark
-choice2 = 1 #0 if company data, 1 if benchmark
+choice2 = 0 #0 if company data, 1 if benchmark
 choice3 = 0 #0 if 20 costumers, 1 if 156 costumers
 #If benchmark, provide the file name
-file = 'lr101.txt'
-# file = 'LC1_2_1.txt'
+# file = 'lr101.txt'
+file = 'LC1_2_1.txt'
 
 #Generic start variables
 current_time = 0
 current_iter = 1
 max_iter = 50000
 time_limit = 100000
-weight_update_iter = 50
+weight_update_iter = 200
 
 iter_threshold = dict(enumerate([round(max_iter/6),round(max_iter/4),round(max_iter/4 *2),round(max_iter/4 *3), round(max_iter)]))
 
-dest_heuristics = ['Shaw', 'Random']
+dest_heuristics = ['Shaw', 'Random', 'Route Removal']
 rep_heuristics = ['Greedy', 'Regret-2', 'Regret-3', 'Regret-4', 'Random']
 
 #Change data structures for more efficient data accessing
@@ -131,6 +128,8 @@ def increment_teta(teta_dest, teta_rep, chosen_ops):
         teta_dest[0] += 1
     if chosen_ops[0] == 'Random':
         teta_dest[1] += 1
+    if chosen_ops[0] == 'Route Removal':
+        teta_dest[2] += 1
     #Repair Ops    
     if chosen_ops[1] == 'Greedy':
         teta_rep[0] += 1
@@ -144,25 +143,23 @@ def increment_teta(teta_dest, teta_rep, chosen_ops):
         teta_rep[4] += 1
     return teta_dest, teta_rep
 
-aug_scores = dict(enumerate([80, 9, 13]))
-#aug_scores = dict(enumerate([33, 9, 13])) #Score increasing parameters sigma 1,2 and 3
+aug_scores = dict(enumerate([33, 9, 13])) #Score increasing parameters sigma 1,2 and 3
 r = 0.1 #Reaction Factor - Controls how quickly weights are updated/changing
-score_dest = [0]*2 #List that keeps track of scores for destroy operators
+score_dest = [0]*3 #List that keeps track of scores for destroy operators
 score_rep = [0]*5 #List that keeps track of scores for repair operators
-w_dest = [1]*2 #First entry is Shaw, second is Random and third is Worst Removals
-w_rep = [1,0,0,0,1] #First entry is Greedy Insertion, second is Regret-2
-teta_dest = [0]*2 #List that keeps track of number of times destroy operator is used
+w_dest = [1]*3 #First entry is Shaw, second is Random and third is Route Removal
+w_rep = [1,1,1,0,1] #First entry is Greedy Insertion, followed by Regret-2, Regret-3, Regret-4 and Random
+teta_dest = [0]*3 #List that keeps track of number of times destroy operator is used
 teta_rep = [0]*5 #List that keeps track of number of times repair operator is used
-gamma = 0.2 #Variable for degree of destruction
+gamma = 0.25 #Variable for degree of destruction
 
 #SIMULATED ANNEALING PARAMETERS
-w = 0.35 #Starting Temperature parameter
-# cooling_rate = 0.9995
-cooling_rate = 0.99985
+w = 0.1 #Starting Temperature parameter
+cooling_rate = 0.002**(1/max_iter) #So that Tfinal = 0.2% of Tstart
 
 if choice2 == 0:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
-    points['service_time'] = [600]*(len(indices)*2-hub_num)
+    points['service_time'] = [300]*(len(indices)*2-hub_num)
     points2, data2, indices2, inv_points2, fleet, id_list, solution_id, solution_id_copy = gather_data(points, data, hub_num, indices, routes, veh_types, choice2)
 elif choice2 == 1:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
@@ -181,30 +178,6 @@ start_time = time.time()
 # Pheromone variables
 delta_rho = 0.2
 evap = 0.001
-
-
-
-
-""" def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap):
-    # #Pheromone matrix structure
-    n_veh = len(fleet['description'])
-    n_points = (len(indices)-hub_num)*2+hub_num
-    
-    #Calculate median values of costumer list volume and weight demands
-    median_w = np.median(list(data['weight']))
-    median_v = np.median(list(data['volume']))
-    pheromone_mat = []
-    for i in range(1,n_veh+1):
-        rho_veh = median_w/fleet['max_weight'][i] + median_v/fleet['capacity'][i]
-        pheromone_mat.append([[rho_veh for _ in range(n_points)] for _ in range(n_points)])
-    pheromone_mat = np.array(pheromone_mat)
-    
-    # Set diagonal elements to 0
-    for matrix in pheromone_mat:
-        for i in range(n_points):
-            matrix[i][i] = 0
-    
-    return pheromone_mat """
 
 def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points, choice2):
     # #Pheromone matrix structure
@@ -233,7 +206,7 @@ pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, eva
 
 
 #Acquire random Initial Solutions
-init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, choice, fleet, veh_sol, pheromone_mat)
+init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, fleet, veh_sol, pheromone_mat)
 
 #Empty variables to display results and metrics
 time_array = []
@@ -244,15 +217,13 @@ current_sol_cost_evolve = []
 time_greedy = []
 time_random = []
 time_regret2 = []
+time_regret3 = []
 perf_measure_greedy = []
 perf_measure_random = []
 perf_measure_regret2 = []
+perf_measure_regret3 = []
 
-if initial_sol == 1:
-    best_sol = init_sol
-elif initial_sol == 2:
-    best_sol = solution_id #MAYBE CHANGE??
-
+best_sol = init_sol
 best_sol_cost = RepairOps.solution_cost(best_sol, dist_mat, points, inv_points2, data, fleet, veh_sol)
 print('Initial Solution Cost: ', best_sol_cost)
 global_best = copy.deepcopy(best_sol)
@@ -275,6 +246,17 @@ def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2,
     )
     return current_sol, current_veh_sol
 
+def verify_feas(solution, points, inv_points2, dist_mat, data2, fleet, vehicles):
+    feas = []
+    for i in range(len(solution[0])):
+        route = solution[0][i]
+        feasible = RepairOps.feasibility_check(route, points, inv_points2, dist_mat, data2, fleet, vehicles[0][i])
+        feas.append(feasible)
+    if False in feas:
+        return False
+    else: 
+        return True
+
 #ADAPTIVE LARGE NEIGHBOURHOOD SEARCH 
 while current_iter <= max_iter and current_time < time_limit:
 
@@ -292,11 +274,19 @@ while current_iter <= max_iter and current_time < time_limit:
     
     best_sol_copy = copy.deepcopy(best_sol)
     best_veh_sol_copy = copy.deepcopy(best_veh_sol)
+
     #DESTROY/REPAIR PROCEDURE
     current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy, pheromone_mat)
+    
+    # feas = verify_feas(current_sol, points, inv_points2, dist_mat, data2, fleet, current_veh_sol)
+    # if feas == False:
+    #     print('Infeasible solution found.')
+    #     print(current_sol)
+    #     print(current_veh_sol)
+    #     break
 
     time3 = time.time()
-    print('Repair: ', time3-time2)
+    # print('Repair: ', time3-time2)
     
     if chosen_ops[1] == 'Greedy':
         time_greedy.append(time3-time2)
@@ -304,6 +294,8 @@ while current_iter <= max_iter and current_time < time_limit:
         time_random.append(time3-time2)
     elif chosen_ops[1] == 'Regret-2': 
         time_regret2.append(time3-time2)
+    elif chosen_ops[1] == 'Regret-3': 
+        time_regret3.append(time3-time2)
        
      
     #Calculate cost of obtained solution
@@ -346,7 +338,7 @@ while current_iter <= max_iter and current_time < time_limit:
     new_sol_cost_evolve.append(newsol_cost)
     current_sol_cost_evolve.append(best_sol_cost)
     global_sol_cost_evolve.append(global_best_cost)
-    w_evolve.append((w_dest[0], w_dest[1], w_rep[0], w_rep[1], w_rep[2], w_rep[3], w_rep[4]))
+    w_evolve.append((w_dest[0], w_dest[1], w_dest[2], w_rep[0], w_rep[1], w_rep[2], w_rep[3], w_rep[4]))
     time_array.append(time.time()-start_time)
     
     #Update scores
@@ -366,15 +358,23 @@ while current_iter <= max_iter and current_time < time_limit:
             perf_measure_random.append(0)
         else:
             perf_measure_random.append(score_rep[4]/sum(time_random))
+        if sum(time_regret2) == 0:
+            perf_measure_regret2.append(0)
+        else:
+            perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
+        if sum(time_regret3) == 0:
+            perf_measure_regret3.append(0)
+        else:
+            perf_measure_regret3.append(score_rep[2]/sum(time_regret3))
         time_greedy = []
         time_random = []
-        # perf_measure_regret2.append(score_rep[1]/sum(time_regret2))
-        # time_regret2 = []
+        time_regret2 = []
+        time_regret3 = []
         
         w_dest, w_rep = OperatorSelection.weights_update(score_dest, score_rep, w_dest, w_rep, teta_dest, teta_rep, aug_scores, r)
-        score_dest = [0]*2 
+        score_dest = [0]*3
         score_rep = [0]*5
-        teta_dest = [0]*2 
+        teta_dest = [0]*3
         teta_rep = [0]*5
         
 
@@ -406,21 +406,32 @@ formatted_cost = "{:.2f}".format(global_best_cost)
 
 #------------- PERFORMANCE MEASURE PLOT ---------------
 iterations_heurtimetest = np.array([i for i in range(weight_update_iter, max_iter+1, weight_update_iter)])
-iterations_heurtimetest = np.mean(iterations_heurtimetest.reshape(-1,int((2*max_iter)/1000)), axis=1)
+iterations_heurtimetest = np.mean(iterations_heurtimetest.reshape(-1,int((2*max_iter)/2000)), axis=1)
 perf_measure_greedy = np.array(perf_measure_greedy)
-perf_measure_greedy = np.mean(perf_measure_greedy.reshape(-1,int((2*max_iter)/1000)), axis=1)
+perf_measure_greedy = np.mean(perf_measure_greedy.reshape(-1,int((2*max_iter)/2000)), axis=1)
 perf_measure_random = np.array(perf_measure_random)
-perf_measure_random = np.mean(perf_measure_random.reshape(-1,int((2*max_iter)/1000)), axis=1)
+perf_measure_random = np.mean(perf_measure_random.reshape(-1,int((2*max_iter)/2000)), axis=1)
+perf_measure_regret2 = np.array(perf_measure_regret2)
+perf_measure_regret2= np.mean(perf_measure_regret2.reshape(-1,int((2*max_iter)/2000)), axis=1)
+perf_measure_regret3 = np.array(perf_measure_regret3)
+perf_measure_regret3= np.mean(perf_measure_regret3.reshape(-1,int((2*max_iter)/2000)), axis=1)
 
 X_Y1_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_greedy)
 X_Y2_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_random)
+X_Y3_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_regret2)
+X_Y4_Spline = make_interp_spline(iterations_heurtimetest, perf_measure_regret3)
+
 X_ = np.linspace(iterations_heurtimetest.min(), iterations_heurtimetest.max(), 500)
 
 Y1_ = X_Y1_Spline(X_)
 Y2_ = X_Y2_Spline(X_)
+Y3_ = X_Y3_Spline(X_)
+Y4_ = X_Y4_Spline(X_)
 
 plt.plot(X_, Y1_, label='Greedy')
 plt.plot(X_, Y2_, label='Random')
+plt.plot(X_, Y3_, label='Regret2')
+plt.plot(X_, Y4_, label='Regret3')
 # plt.plot(iterations_heurtimetest, perf_measure_regret2, label='Regret-2')
 
 # Adding labels and a legend
@@ -437,7 +448,7 @@ plt.show()
 if choice2 == 0:
     name = f"CompanyData_{iteration}_{formatted_time}_{formatted_cost}.csv"
 else:
-    name = f"BenchmarkData_{iteration}_{formatted_time}_{formatted_cost}.csv"
+    name = f"BenchmarkData_{file}_{iteration}_{formatted_time}_{formatted_cost}.csv"
 
 results = []
 

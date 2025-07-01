@@ -10,3 +10,6 @@ acceptance function.
 Folders HFVRP_Version and Dynamic_Version contain the Heterogenous Fleet and Dynamic versions, respectively, of the developed code.
 
 By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
+
+Thesis Abstract: https://fenix.tecnico.ulisboa.pt/downloadFile/3096619880809141/Extended_Abstract_JoaoMoura_VersFinal.pdf
+Thesis Document: https://fenix.tecnico.ulisboa.pt/downloadFile/3096619880809140/Masters_Thesis_JoaoMoura_VersFinal.pdf

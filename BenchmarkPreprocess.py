@@ -4,22 +4,25 @@
 
 import pandas as pd
 import numpy as np
+import os
 from collections import deque
 
 def import_and_process_data(file):
     # Read the data from the txt file
     
-    #Laptop and desktop paths
-    #Dataset = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
-    Dataset = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
-
+    # Build the relative path to the dataset
+    file_path = os.path.join('Benchmark datasets', 'pdp_100', file)
+    
+    # Read the dataset, skipping the first row
+    Dataset = pd.read_csv(file_path, sep='\t', header=None, skiprows=1)
+    
     # Set column names for the DataFrame
     column_names = ['task', 'X', 'Y', 'Demand', 'earliest_time', 'latest_time', 'service_time', 'Pickup', 'Delivery']
     Dataset.columns = column_names
+    
+    # Read only the first line (metadata/info)
+    DatasetInfo = pd.read_csv(file_path, sep='\t', header=None, nrows=1)
 
-    # Read only the first line from the txt file
-    #DatasetInfo = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
-    DatasetInfo = pd.read_csv('C:\\Users\\João Moura\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
 
     # Set column names for the DataFrame
     column_names = ['num_vehicles', 'vehicle_capacity', 'vehicle_speed']

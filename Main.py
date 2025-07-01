@@ -11,8 +11,9 @@
 
 #Change current working directory
 import os
-# os.chdir('C:\\Users\\Utilizador\\Desktop\\CodigoMain')
-os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
+
+cwd = os.getcwd()
+os.chdir(cwd)
 
 import matplotlib.pyplot as plt
 import DestroyOps
@@ -28,11 +29,6 @@ import random
 import csv
 import numpy as np
 from scipy.interpolate import make_interp_spline
-
-# def main():
-
-# os.chdir('C:\\Users\\exemp\\Desktop\\MSc_Thesis_Algorithm-main\\MSc_Thesis_Algorithm-main')
-# os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
 #Decide if company data or benchmark
 choice2 = 0 #0 if company data, 1 if benchmark
@@ -493,6 +489,3 @@ with open(name, mode="w", newline="") as csv_file:
         writer.writerow(result)
 
 print(f"Results saved to {name}")
-
-# if __name__ == "__main__":
-#     main()

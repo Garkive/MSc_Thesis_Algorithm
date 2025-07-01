@@ -7,7 +7,8 @@ functions. OperatorSelection.py contains all weight and score update functions a
 function to select heuristics. AcceptanceCriteria.py contains a simple Simulated Annealing 
 acceptance function.
 
-Folders HFVRP_Version and Dynamic_Version contain the Heterogenous Fleet and Dynamic versions, respectively, of the developed code.
+Folder HFVRP_Version contains the Heterogenous Fleet version of the code with the Golden & Taillard benchmarks.
+Folder Dynamic_Version contains the Dynamic version of the code used on the real-world problem.
 
 By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
 

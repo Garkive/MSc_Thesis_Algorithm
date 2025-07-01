@@ -11,7 +11,6 @@
 
 #Change current working directory
 import os
-
 cwd = os.getcwd()
 os.chdir(cwd)
 

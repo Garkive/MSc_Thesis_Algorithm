@@ -7,33 +7,31 @@ import numpy as np
 import os
 from collections import deque
 
-def import_and_process_data(file):
-    # Read the data from the txt file
-    
+def import_and_process_data(file, file2):
     # Build the relative path to the dataset
-    file_path = os.path.join('Benchmark datasets', 'pdp_100', file)
+    file_path = os.path.join('HFVRP Benchmark', file)  
+    file_path2 = os.path.join('HFVRP Benchmark', file2)  
     
-    # Read the dataset, skipping the first row
-    Dataset = pd.read_csv(file_path, sep='\t', header=None, skiprows=1)
-    
+    #Dataset = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, skiprows=1)
+    Dataset = pd.read_csv(file_path, sep=';', header=None, skiprows=1)
+
     # Set column names for the DataFrame
     column_names = ['task', 'X', 'Y', 'Demand', 'earliest_time', 'latest_time', 'service_time', 'Pickup', 'Delivery']
     Dataset.columns = column_names
-    
-    # Read only the first line (metadata/info)
-    DatasetInfo = pd.read_csv(file_path, sep='\t', header=None, nrows=1)
 
+    # Read only the first line from the txt file
+    #DatasetInfo = pd.read_csv('C:\\Users\\exemp\\Desktop\\Benchmark datasets\\pdp_100\\' + file, sep='\t', header=None, nrows=1)
+    VehicleInfo = pd.read_csv(file_path2 , sep=';', header=None)
 
     # Set column names for the DataFrame
-    column_names = ['num_vehicles', 'vehicle_capacity', 'vehicle_speed']
-    DatasetInfo.columns = column_names
+    column_names = ['id_transport_type', 'max_weight', 'fixed_cost', 'variable_cost', 'number']
+    VehicleInfo.columns = column_names
+    veh_types = VehicleInfo.set_index('id_transport_type')
+    speed = []
+    for i in range(len(veh_types)):
+        speed.append(1)
+    veh_types['speed'] = speed
     
-    veh_capacity = DatasetInfo.iloc[0][1]
-    max_vehicles = DatasetInfo.iloc[0][0]
-    
-
-    veh_types = pd.DataFrame(data={'id_transport_type': [1], 'description': ['Carrinha'], 'capacity': [0], 'max_weight': [veh_capacity], 'speed': [1], 'cost_km': [100000]})
-    veh_types = veh_types.set_index('id_transport_type')
     
     hub_num = 1
     n = int((len(Dataset) - 1)/2)
@@ -141,7 +139,7 @@ def import_and_process_data(file):
         'end_time_pu': [Dataset.iloc[indices[1][0]][5]],
         'start_time_do': [Dataset.iloc[indices[1][1]][4]],
         'end_time_do': [Dataset.iloc[indices[1][1]][5]],
-        'weight': [-Dataset.iloc[indices[1][0]][3]],
+        'weight': [Dataset.iloc[indices[1][0]][3]],
         'volume': [0],
         'latitude_pu': [Dataset.iloc[indices[1][0]][1]],
         'longitude_pu': [Dataset.iloc[indices[1][0]][2]],
@@ -158,7 +156,7 @@ def import_and_process_data(file):
             'end_time_pu': Dataset.iloc[indices[i][0]][5],
             'start_time_do': Dataset.iloc[indices[i][1]][4],
             'end_time_do': Dataset.iloc[indices[i][1]][5],
-            'weight': -Dataset.iloc[indices[i][0]][3],
+            'weight': Dataset.iloc[indices[i][0]][3],
             'volume': 0,
             'latitude_pu': Dataset.iloc[indices[i][0]][1],
             'longitude_pu': Dataset.iloc[indices[i][0]][2],

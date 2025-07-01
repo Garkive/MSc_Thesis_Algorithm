@@ -10,10 +10,8 @@
 #By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
 
 import os
-
-# os.chdir('C:\\Users\\1483498\\Desktop\\CodigoT')
-os.chdir('C:\\Users\\João Moura\\Desktop\\CodigoT')
-# os.chdir('C:\\Users\\João Moura\\Desktop\\Dynamic_Adapt')
+cwd = os.getcwd()
+os.chdir(cwd)
 
 import DDestroyOps
 import DRepairOps
@@ -29,19 +27,10 @@ import copy
 import random
 import csv
 
-# def main():
-#Change current working directory
-
-#os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
-# os.chdir('C:\\Users\\exemp\\Desktop\\MSc_Thesis_Algorithm-main\\MSc_Thesis_Algorithm-main')
-# os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
-# os.chdir('C:\\Users\\João Moura\\Desktop\\Dynamic_Adapt')
-# os.chdir('C:\\Users\\1483498\\Desktop\\CodigoT')
-# os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
-
 #Decide if company data or benchmark
 choice2 = 0 #0 if company data, 1 if benchmark
 choice3 = 0 #0 if 20 costumers, 1 if 156 costumers
+
 #If benchmark, provide the file name
 # file = 'lr101.txt'
 file = 'LC1_2_1.txt'

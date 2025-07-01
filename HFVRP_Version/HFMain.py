@@ -10,9 +10,8 @@ Simulated Annealing acceptance function.
 By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024"""
 
 import os
-#os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
-# os.chdir('C:\\Users\\exemp\\Desktop\\MSc_Thesis_Algorithm-main\\MSc_Thesis_Algorithm-main')
-os.chdir('C:\\Users\\João Moura\\Desktop\\HFVRP_Adapt')
+cwd = os.getcwd()
+os.chdir(cwd)
 
 import matplotlib.pyplot as plt
 import HFDestroyOps
@@ -28,12 +27,6 @@ import random
 import csv
 import numpy as np
 from scipy.interpolate import make_interp_spline
-
-#Change current working directory
-import os
-
-os.chdir('C:\\Users\\João Moura\\Desktop\\HFVRP_Adapt')
-
 
 #Decide which initial solution to use
 initial_sol = 1 #1 for random Greedy Insertion, 2 for NN

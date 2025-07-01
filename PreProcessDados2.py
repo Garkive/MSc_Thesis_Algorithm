@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import csv
 import math
+import copy
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -175,7 +176,11 @@ def preprocessing(df_pu, df_do, df_hub, objects, couriers):
         for j in range(len(long)):
                         DistMat[i][j] = haversine([lat[i],long[i]],[lat[j],long[j]])
                         DistMat[j][i] = DistMat[i][j]
-       
+     
+    
+    lati_pu = copy.deepcopy(lat_pu)
+    lati_do = copy.deepcopy(lat_do)
+        
     lat_pu = pd.DataFrame(lat_pu, columns=['latitude_pu'])
     pu_df = lat_pu.join(pd.DataFrame(long_pu, columns=['longitude_pu']), how = 'outer')
     pu_df = df1_pu.join(pu_df, how = 'outer')
@@ -228,7 +233,7 @@ def preprocessing(df_pu, df_do, df_hub, objects, couriers):
         ind = locate(ids, lambda x: x == ids[i])
         indices.append(list(ind))
 
-    return data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub
+    return data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub, lati_pu, lati_do
 
 #Assigns each P-D pair to a depot
 def grouping_phase(data, hub_num, indices, DistMat, n, points):
@@ -277,7 +282,7 @@ def grouping_phase(data, hub_num, indices, DistMat, n, points):
  
 
 cols_pu, df_pu, cols_do, df_do, cols_hub, df_hub, objects, couriers, veh_type = import_data(dados, hubdados, path)
-data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub = preprocessing(df_pu, df_do, df_hub, objects, couriers) 
+data, indices, points, hub_num, DistMat, couriers, point, lat, long, lat_pu, long_pu, lat_do, long_do, lat_hub, long_hub, lati_pu, lati_do = preprocessing(df_pu, df_do, df_hub, objects, couriers) 
 n = data.shape[0]      
 depot_ind, hub_pairs, Dist_hub, D, hub_costum = grouping_phase (data, hub_num, indices, DistMat, n, points)
 service_time = 600

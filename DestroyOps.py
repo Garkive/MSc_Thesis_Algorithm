@@ -74,13 +74,13 @@ def solution_ids(solution, points, inv_points):
 
  
 #Calculate relatedness measure between current customer and every other in the solution
-def relatedness(j, L, dist_mat, data, phi, xi, qsi, inv_points):    
+def relatedness(j, L, dist_mat, data, phi, xi, qsi, inv_points, pu_norm, do_norm, max_dist, load_norm):    
     relatedness = []
     for i in range(len(L)):
         p = L[i]
         p_2 = find_pos(p, inv_points)
         j_2 = find_pos(j, inv_points)
-        relate = phi*(dist_mat[j_2[0]][p_2[0]]+dist_mat[j_2[1]][p_2[1]]) + xi*((data['start_time_pu'][j]-data['start_time_pu'][p])+(data['end_time_pu'][j]-data['end_time_pu'][p])) + qsi*(data['weight'][j]-data['weight'][p])
+        relate = phi*((dist_mat[j_2[0]][p_2[0]]+dist_mat[j_2[1]][p_2[1]])/max_dist) + xi*((data['start_time_pu'][j]-data['start_time_pu'][p])/pu_norm + (data['end_time_pu'][j]-data['end_time_pu'][p])/do_norm) + qsi*((data['weight'][j]-data['weight'][p])/load_norm)
         relatedness.append(relate) 
     L_sort = [x for _, x in sorted(zip(relatedness, L))]
     return L_sort
@@ -98,7 +98,7 @@ def partial_sol(solution_id, D):
     return partial_solution    
         
 #RANDOM/SHAW REMOVAL
-def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution):
+def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution, pu_norm, do_norm, max_dist, load_norm):
     #Define a copy of the current solution 
     i = random.choice(solution_id_copy)
     D = [i]
@@ -108,7 +108,7 @@ def Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id
         j = random.choice(list(D))
         #Temporary set with all current solution costumers not included in D
         #Compute relatedness metric between j and all elements in L, sort L according to it
-        L_sort = relatedness(j, L, dist_mat, data, phi, xi, qsi, inv_points)
+        L_sort = relatedness(j, L, dist_mat, data, phi, xi, qsi, inv_points, pu_norm, do_norm, max_dist, load_norm)
         E = round((random.random()**p)*(len(L)-1)) #Uniformly choose y in [0,1); E = y^p* len(L)
         #Select costumer L[E] from L and insert it into D
         D.append(L_sort[E])
@@ -148,15 +148,15 @@ def remove_empty_routes(partial_solution, points, veh_solution):
         del veh_solution[aux_list[k][0]][aux_list[k][1]]
     return partial_solution, veh_solution
 
-def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma, veh_solution):
+def DestroyOperator(solution_id_copy, solution_id, points, inv_points, data, dist_mat, hub_num, indices, chosen_ops, current_iter, iter_threshold, gamma, veh_solution, pu_norm, do_norm, max_dist, load_norm):
     n, p, phi, xi, qsi = variables(indices, hub_num)
     q = random.randint(4, round(n*gamma))
     #q = round(n*d) #Number of pairs to be removed each iteration   
     if chosen_ops[0] == 'Random':
         p = 1
-        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
+        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution, pu_norm, do_norm, max_dist, load_norm)
     if chosen_ops[0] == 'Shaw':
-        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution)
+        partial_solution, removed_req, veh_solution = Shaw_removal(indices, hub_num, q, p, solution_id_copy, dist_mat, solution_id, points, inv_points, data, phi, xi, qsi, veh_solution, pu_norm, do_norm, max_dist, load_norm)
     if chosen_ops[0] == 'Route Removal':
         partial_solution, removed_req, veh_solution = Route_removal(solution_id, veh_solution)
     return partial_solution, removed_req, veh_solution

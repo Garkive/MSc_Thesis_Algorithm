@@ -1,5 +1,5 @@
 #Adaptive Large Neighborhood Search (ALNS) algorithm with Simulated Annealing acceptance criteria
-#to solve the VRPPD with multiple depots, time windows, capacitated (volume and weight) and with heterogenous fleet.
+#to solve the VRPPD with multiple depots, time windows, capacitated and with heterogenous fleet.
 #It deals with a specific case from a real world distribution company as well as the Li & Lim benchmarks.
 
 #Modules DestroyOps.py and RepairOps.py contain the main heuristics as well as the required support
@@ -8,6 +8,11 @@
 #acceptance function.
 
 #By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
+
+#Change current working directory
+import os
+# os.chdir('C:\\Users\\Utilizador\\Desktop\\CodigoMain')
+os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 
 import matplotlib.pyplot as plt
 import DestroyOps
@@ -25,31 +30,29 @@ import numpy as np
 from scipy.interpolate import make_interp_spline
 
 # def main():
-#Change current working directory
-import os
-#os.chdir('C:\\Users\\exemp\\Desktop\\Tese de Mestrado\\Código')
+
 # os.chdir('C:\\Users\\exemp\\Desktop\\MSc_Thesis_Algorithm-main\\MSc_Thesis_Algorithm-main')
-os.chdir('C:\\Users\\João Moura\\Documents\\GitHub\\MSc_Thesis_Algorithm')
 # os.chdir('C:\\Users\\1483498\\Desktop\\Python Extra\\MSc_Thesis_Algorithm-main')
 
 #Decide if company data or benchmark
 choice2 = 0 #0 if company data, 1 if benchmark
-choice3 = 0 #0 if 20 costumers, 1 if 156 costumers
+choice3 = 1 #0 if 20 costumers, 1 if 156 costumers
 #If benchmark, provide the file name
-# file = 'lr101.txt'
-file = 'LC1_2_1.txt'
+file = 'lrc201.txt'
+# file = 'LR1_2_1.txt'
 
 #Generic start variables
 current_time = 0
 current_iter = 1
 max_iter = 50000
 time_limit = 100000
-weight_update_iter = 200
+weight_update_iter = 100
 
 iter_threshold = dict(enumerate([round(max_iter/6),round(max_iter/4),round(max_iter/4 *2),round(max_iter/4 *3), round(max_iter)]))
 
 dest_heuristics = ['Shaw', 'Random', 'Route Removal']
 rep_heuristics = ['Greedy', 'Regret-2', 'Regret-3', 'Regret-4', 'Random']
+use_noise = [True, False]
 
 #Change data structures for more efficient data accessing
 def data_structures(points, data, hub_num, indices, veh_types, choice2):
@@ -122,7 +125,12 @@ def are_routes_equal(route1, route2):
     return True
 
 #Increment teta values, that indicate how many times each heuristic was selected
-def increment_teta(teta_dest, teta_rep, chosen_ops):
+def increment_teta(teta_dest, teta_rep, teta_noise, chosen_ops):
+    #Noise
+    if chosen_ops[2] == True:
+        teta_noise[0] += 1
+    if chosen_ops[2] == False:
+        teta_noise[1] += 1
     #Destroy Ops
     if chosen_ops[0] == 'Shaw':
         teta_dest[0] += 1
@@ -141,21 +149,25 @@ def increment_teta(teta_dest, teta_rep, chosen_ops):
         teta_rep[3] += 1
     if chosen_ops[1] == 'Random':
         teta_rep[4] += 1
-    return teta_dest, teta_rep
+    return teta_dest, teta_rep, teta_noise
 
 aug_scores = dict(enumerate([33, 9, 13])) #Score increasing parameters sigma 1,2 and 3
 r = 0.1 #Reaction Factor - Controls how quickly weights are updated/changing
 score_dest = [0]*3 #List that keeps track of scores for destroy operators
 score_rep = [0]*5 #List that keeps track of scores for repair operators
+score_noise = [0]*2 #List that keeps track of noise score
 w_dest = [1]*3 #First entry is Shaw, second is Random and third is Route Removal
-w_rep = [1,1,1,0,1] #First entry is Greedy Insertion, followed by Regret-2, Regret-3, Regret-4 and Random
+w_rep = [1,1,0,0,1] #First entry is Greedy Insertion, followed by Regret-2, Regret-3, Regret-4 and 
+w_noise = [0,1] #First entry is Noise = True, second is Noise = False
 teta_dest = [0]*3 #List that keeps track of number of times destroy operator is used
 teta_rep = [0]*5 #List that keeps track of number of times repair operator is used
-gamma = 0.25 #Variable for degree of destruction
+teta_noise = [0]*2 #List that keeps track of number of time noise is used
+gamma = 0.2 #Variable for degree of destruction
+n_factor = 0.025 #Variable for the noise factor
 
 #SIMULATED ANNEALING PARAMETERS
-w = 0.1 #Starting Temperature parameter
-cooling_rate = 0.002**(1/max_iter) #So that Tfinal = 0.2% of Tstart
+w = 0.05 #Starting Temperature parameter
+cooling_rate = 0.01**(1/max_iter) #So that Tfinal = 0.2% of Tstart
 
 if choice2 == 0:
     points, data, dist_mat, hub_num, routes, indices, veh_types = NewInitialSolutions.import_data(choice3)
@@ -168,7 +180,7 @@ elif choice2 == 1:
     points2, data2, indices2 = gather_data(points, data, hub_num, indices, routes, [], choice2)
 
 # Initialize empty variables
-chosen_ops = [0]*2
+chosen_ops = [0]*3
 veh_sol = []
 for i in range(hub_num):
     veh_sol.append([])
@@ -204,6 +216,15 @@ def Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points, c
 
 pheromone_mat = Initiate_pheromone(data, fleet, indices, hub_num, delta_rho, evap, points, choice2)
 
+#Relatedness normalization values
+pu_norm = max(list(data['start_time_pu']))-min(list(data['start_time_pu']))
+do_norm = max(list(data['start_time_do']))-min(list(data['start_time_do']))
+load_norm = abs(max(list(data['weight']), key=abs))-abs(min(list(data['weight']), key=abs))
+
+#NOISE COMPUTATION
+max_dist = max(dist for dist_array in dist_mat for dist in dist_array) #Maximum distance between nodes
+max_veh_cost = max_cost = max(fleet['cost_km'][vehicle] for vehicle in list(fleet['cost_km'].keys())) #Maximum vehicle cost
+max_N = n_factor*(max_dist*max_cost) #Noise interval threshold
 
 #Acquire random Initial Solutions
 init_sol, init_veh = NewInitialSolutions.InitialSolution(points2, data2, indices2, inv_points2, hub_num, dist_mat, fleet, veh_sol, pheromone_mat)
@@ -235,14 +256,14 @@ temperature = AcceptanceCriteria.calculate_starting_temperature(best_sol_cost, w
 print('Starting temp: ', temperature)
 accept = False
 
-def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol, pheromone_mat):
+def ALNS_destroy_repair(solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol, pheromone_mat, max_N, pu_norm, do_norm, max_dist, load_norm):
     #Destroy Solution
     partial_solution, removed_req, partial_veh_solution = DestroyOps.DestroyOperator(
-        solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol
+        solution_id_copy, best_sol, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol, pu_norm, do_norm, max_dist, load_norm
     )
     #Repair Solution
     current_sol, current_veh_sol = RepairOps.RepairOperator(
-        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops, fleet, partial_veh_solution, pheromone_mat
+        hub_num, removed_req, partial_solution, points2, data2, dist_mat, indices2, inv_points2, chosen_ops, fleet, partial_veh_solution, pheromone_mat, max_N
     )
     return current_sol, current_veh_sol
 
@@ -267,8 +288,8 @@ while current_iter <= max_iter and current_time < time_limit:
     score_case = [False]*3
 
     #Choose Heuristics for this iteration and increment teta values
-    chosen_ops = OperatorSelection.Roulette_Selection(w_dest, w_rep, dest_heuristics, rep_heuristics, chosen_ops) 
-    teta_dest, teta_rep = increment_teta(teta_dest, teta_rep, chosen_ops)
+    chosen_ops = OperatorSelection.Roulette_Selection(w_dest, w_rep, w_noise, dest_heuristics, rep_heuristics, use_noise, chosen_ops) 
+    teta_dest, teta_rep, teta_noise = increment_teta(teta_dest, teta_rep, teta_noise, chosen_ops)
     
     time2 = time.time()
     
@@ -276,7 +297,7 @@ while current_iter <= max_iter and current_time < time_limit:
     best_veh_sol_copy = copy.deepcopy(best_veh_sol)
 
     #DESTROY/REPAIR PROCEDURE
-    current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy, pheromone_mat)
+    current_sol, current_veh_sol = ALNS_destroy_repair(solution_id_copy, best_sol_copy, points2, inv_points2, data2, dist_mat, hub_num, indices2, chosen_ops, current_iter, iter_threshold, gamma, best_veh_sol_copy, pheromone_mat, max_N, pu_norm, do_norm, max_dist, load_norm)
     
     # feas = verify_feas(current_sol, points, inv_points2, dist_mat, data2, fleet, current_veh_sol)
     # if feas == False:
@@ -297,7 +318,6 @@ while current_iter <= max_iter and current_time < time_limit:
     elif chosen_ops[1] == 'Regret-3': 
         time_regret3.append(time3-time2)
        
-     
     #Calculate cost of obtained solution
     newsol_cost = RepairOps.solution_cost(current_sol, dist_mat, points, inv_points2, data, fleet, current_veh_sol)
     
@@ -321,6 +341,7 @@ while current_iter <= max_iter and current_time < time_limit:
             global_best_veh = copy.deepcopy(current_veh_sol)
             pheromone_mat = OperatorSelection.Pheromones_update(pheromone_mat, best_sol, 'Global', delta_rho, inv_points2)
             print('Solution Improved - Cost:', global_best_cost, flush=True)
+            print('Solution Improved - Vehicles:', len(global_best_veh[0]), flush=True)
             # print('Solution Tardiness:', total_tardiness, flush=True)
            
         elif is_new and newsol_cost < best_sol_cost:
@@ -331,7 +352,7 @@ while current_iter <= max_iter and current_time < time_limit:
         best_veh_sol = copy.deepcopy(current_veh_sol)
         best_sol = copy.deepcopy(current_sol)
         best_sol_cost = copy.deepcopy(newsol_cost)
-    
+        
     
     
     #Update cost and weight arrays for results
@@ -342,7 +363,7 @@ while current_iter <= max_iter and current_time < time_limit:
     time_array.append(time.time()-start_time)
     
     #Update scores
-    score_dest, score_rep = OperatorSelection.score_update(score_dest, score_rep, aug_scores, score_case, chosen_ops)        
+    score_dest, score_rep, score_noise = OperatorSelection.score_update(score_dest, score_rep, score_noise, aug_scores, score_case, chosen_ops)        
     
     #Time and Iteration update
     current_time = time.time() - start_time
@@ -371,11 +392,13 @@ while current_iter <= max_iter and current_time < time_limit:
         time_regret2 = []
         time_regret3 = []
         
-        w_dest, w_rep = OperatorSelection.weights_update(score_dest, score_rep, w_dest, w_rep, teta_dest, teta_rep, aug_scores, r)
+        w_dest, w_rep, w_noise = OperatorSelection.weights_update(score_dest, score_rep, score_noise, w_dest, w_rep, w_noise, teta_dest, teta_rep, teta_noise, aug_scores, r)
         score_dest = [0]*3
         score_rep = [0]*5
+        score_noise = [0]*2
         teta_dest = [0]*3
         teta_rep = [0]*5
+        teta_noise = [0]*2
         
 
         
@@ -448,7 +471,8 @@ plt.show()
 if choice2 == 0:
     name = f"CompanyData_{iteration}_{formatted_time}_{formatted_cost}.csv"
 else:
-    name = f"BenchmarkData_{file}_{iteration}_{formatted_time}_{formatted_cost}.csv"
+    no_veh = len(global_best_veh[0])
+    name = f"BenchmarkData_{file}_{iteration}_{formatted_time}_{formatted_cost}_{no_veh}.csv"
 
 results = []
 

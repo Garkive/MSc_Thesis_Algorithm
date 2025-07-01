@@ -99,8 +99,8 @@ def route_costNIS(route, dist_mat, points, inv_points, data, fleet, vehicle):
     time = 0
     
     veh_spd = fleet['speed'][vehicle]
-    service_time = 5 * 60
-    # service_time = 0
+    # service_time = 5 * 60
+    service_time = 0
     
     for i in range(len(route)-1):
         p1 = find_pos(route[i], inv_points)[auxiliary_list.count(route[i])]
@@ -129,7 +129,7 @@ def route_costNIS(route, dist_mat, points, inv_points, data, fleet, vehicle):
 
         rcost += dist_mat[p1][p2] + tardiness
     
-    rcost = (rcost*(fleet['cost_km'][vehicle]/1000)/100)
+    # rcost = rcost*fleet['cost_km'][vehicle]
     
     return rcost
 

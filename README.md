@@ -8,7 +8,7 @@ function to select heuristics. AcceptanceCriteria.py contains a simple Simulated
 acceptance function.
 
 Folder HFVRP_Version contains the Heterogenous Fleet version of the code with the Golden & Taillard benchmarks.
-Folder Dynamic_Version contains the Dynamic version of the code used on the real-world problem.
+Folder DVRP_Version contains the Dynamic version of the code used on the real-world problem.
 
 By: João Moura, MSc. in Mechanical Engineering @ Instituto Superior Técnico, Lisbon, 2024
 
